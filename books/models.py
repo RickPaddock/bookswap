@@ -1,0 +1,100 @@
+from django.db import models
+from django.contrib.auth.models import AbstractUser
+# slugify removes non-alphanumeric chars to so URLs can be created
+from django.template.defaultfilters import slugify
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+
+# User model imports pre-defined django user items. Easier for us.
+class CustomUser(AbstractUser):
+    location = models.CharField(max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return self.username
+    
+
+class Book(models.Model):
+    ISBN_13 = models.CharField(max_length=13, primary_key=True)
+    google_book_id = models.CharField(max_length=50, unique=True)
+    title = models.CharField(max_length=100, blank=False)
+    owner = models.ManyToManyField(CustomUser, through='UserBook') 
+
+
+    def __str__(self):
+        return f"{self.title}/{self.ISBN_13}"
+
+
+class Group(models.Model):
+    group_name = models.CharField(max_length=255, unique=True)
+    # SLUG only contains letters, numbers, underscores, or hyphens
+    slug = models.SlugField(allow_unicode=True, unique=True) 
+    description = models.TextField(blank=True, default='')
+    description_html = models.TextField(editable=False, default='', blank=True)
+    members = models.ManyToManyField(CustomUser, through='GroupMember') 
+
+    def __str__(self):
+        return self.group_name
+    
+
+class UserBook(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    book = models.ForeignKey(Book, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"""{self.user}/{self.book}"""
+
+    class meta:
+        unique_together = ('user', 'book')
+
+    @classmethod
+    def assign_book_to_user(cls, user, google_book_id):
+        book, created = Book.objects.get_or_create(google_book_id=google_book_id)
+        user_book, UserBook_created = cls.objects.get_or_create(user=user, book=book)
+
+        return user_book
+
+
+# Many to Many THROUGH table
+class GroupMember(models.Model):
+    user = models.ForeignKey(CustomUser, related_name='user_groups', on_delete=models.CASCADE)
+    group = models.ForeignKey(Group, related_name='group_memberships', on_delete=models.CASCADE)
+    
+    def __str__(self):
+        return f"""{self.group}/{self.user}"""
+    
+    class Meta:
+        unique_together = ('user', 'group')
+
+    @classmethod
+    def assign_user_to_group(cls, user, group_name):
+        group_user, GroupUser_created = cls.objects.get_or_create(user=user, group_name=group_name)
+
+        return group_user
+
+
+class Transaction(models.Model):
+    owner = models.ForeignKey(CustomUser, related_name='book_owner', on_delete=models.CASCADE)
+    borrower = models.ForeignKey(CustomUser, related_name='book_borrower', on_delete=models.CASCADE)
+    book = models.ForeignKey(Book, on_delete=models.CASCADE)
+    borrowed_datetime = models.DateTimeField(default=timezone.now, blank=False)
+    returned_datetime = models.DateTimeField(null=True, blank=True)
+
+    def clean(self):
+        if self.owner not in self.book.owner.all():
+            raise ValidationError("The selected book is not owned by the specified owner")
+
+        if self.owner == self.borrower:
+            raise ValidationError("Owner and borrower cannot be the same person")
+
+        if self.book.transaction_set.exclude(pk=self.pk).filter(returned_datetime__isnull=True).exists():
+            raise ValidationError("The selected book is already borrowed and has not been returned")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        if self.returned_datetime:
+            return f"{self.borrower.username} returned {self.book.title} to {self.owner.username} on {self.returned_datetime}"
+        else:
+            return f"{self.borrower.username} borrowed {self.book.title} from {self.owner.username} on {self.borrowed_datetime}"

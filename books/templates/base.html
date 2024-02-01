@@ -12,12 +12,13 @@
                 <div class="container-fluid d-grid gap-2 align-items-center" style="grid-template-columns: 1fr 2fr 1fr;">
                     <div class="d-flex align-items-center">
                         <ul class="navbar-nav">
-                            <li class="nav-item"> <a class="nav-link active navbar-brand" aria-current="page" href="{% url 'index' %}">home</a> </li>
+                            <li class="nav-item"> <a class="nav-link active navbar-brand" aria-current="page" href="{% url 'index' %}">Home</a> </li>
                         </ul>
                     </div>
                     <div class="d-flex align-items-center">
-                        <form class="w-100 me-3">
-                            <input type="search" class="form-control" placeholder="Search books ...." aria-label="Search">
+                        <form class="w-100 me-3" method="post">
+                            {% csrf_token %}
+                            <input type="search" action="{% url 'index' %}" class="form-control" placeholder="Search books ...." aria-label="Search" id="query" name="query" required>
                         </form>
                     </div>
                 <div class="navbar-nav ms-auto">

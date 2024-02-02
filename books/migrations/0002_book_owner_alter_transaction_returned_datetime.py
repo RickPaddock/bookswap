@@ -7,18 +7,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('books', '0001_initial'),
+        ("books", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='book',
-            name='owner',
-            field=models.ManyToManyField(through='books.UserBook', to=settings.AUTH_USER_MODEL),
+            model_name="book",
+            name="owner",
+            field=models.ManyToManyField(
+                through="books.UserBook", to=settings.AUTH_USER_MODEL
+            ),
         ),
         migrations.AlterField(
-            model_name='transaction',
-            name='returned_datetime',
+            model_name="transaction",
+            name="returned_datetime",
             field=models.DateTimeField(blank=True, null=True),
         ),
     ]

@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('books', '0003_wishlist'),
+        ("books", "0003_wishlist"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='wishlist',
-            name='removed_datetime',
+            model_name="wishlist",
+            name="removed_datetime",
             field=models.DateTimeField(blank=True, null=True),
         ),
     ]

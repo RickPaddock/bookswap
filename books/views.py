@@ -12,9 +12,9 @@ def index(request):
 class SignUp(CreateView):
     form_class = UserCreateForm
     template_name = "signup.html"
-    # Upon successful signup go to login page. Reverse_lazy waits for submit button to be pressed
+    # Successful signup to login page. Reverse_lazy waits for submit button
     success_url = reverse_lazy("login")
-    success_message = "Your account was created successfully. You can now log in!"
+    success_message = "Account created successfully. You can now log in!"
 
     def form_valid(self, form):
         response = super().form_valid(form)

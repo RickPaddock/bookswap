@@ -25,6 +25,7 @@ from books.views import (
     book_search,
     user_account,
     book_database,
+    group_database,
 )
 
 # Django provides login and logout views so we dont create them in views.py
@@ -43,6 +44,7 @@ urlpatterns = [
     path("user_account/", user_account.as_view(), name="user_account"),
     path("book_search/", book_search, name="book_search"),
     path("books/", book_database, name="book_database"),
+    path("groups/", group_database, name="group_database"),
 ]
 
 # Required for debug toolbar

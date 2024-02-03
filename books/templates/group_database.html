@@ -3,24 +3,23 @@
 
     <div class="container my-5">
         <div class="p-5 text-center bg-body-tertiary rounded-3">
-            <h1 class="text-body-emphasis">Books</h1>
+            <h1 class="text-body-emphasis">Groups</h1>
             <h1 class="text-body-emphasis"></h1>
-            <p class="lead">List of all books</p>
+            <p class="lead">List of all groups</p>
         </div>
         <br>
-        {% if books %}
+        {% if groups %}
             <ol>
-                {% for rec in books %}
-                <li>{{rec.title}} </li>
+                {% for rec in groups %}
+                <li>{{rec.group_name}}: {{rec.description}} </li>
                 <ul>
-                    ISBN_13: {{rec.ISBN_13}}<br>
-                    Number of copies: <span class="badge">{{rec.owner.count}}</span>
+                    <span class="badge">{{rec.members.count}}</span> member{{rec.members.count|pluralize}}
                 </ul>
                 <br>
             {% endfor %}
             </ol>
             {% else %}
-                <p>NO BOOKS FOUND</p>
+                <p>NO GROUPS FOUND</p>
         {% endif %}
     </div>
 

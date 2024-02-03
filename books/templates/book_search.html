@@ -1,25 +1,9 @@
 {% extends "base.html" %}
 {% block body_block %}
 
-    <br>
-    <h1>Book Search</h1>
-
-    <!-- #TODO: move this to CSS -->
-    <style>
-        ol {
-            display: flex;
-            flex-direction: column;
-            gap: 30px;
-        }
-
-        .select-button[disabled] {
-            background-color: Blue;
-            cursor: not-allowed;
-        }
-    </style>
-
     {% if query %}
         <h2>Search results for "{{ query }}"</h2>
+        <br>
         {% if books %}
             <ol>
                 {% for book in books %}
@@ -28,15 +12,19 @@
                         <p>Authors: {{ book.authors }}</p>
                         <img src="{{ book.thumbnail }}" alt="{{ book.title }}">
                         <p>{{ book.description|safe }}</p>
-                        <!-- Include form fields for each book -->
-                        <!-- <form action="{% url 'user_account' %}" method="post" >
-                            {% csrf_token %}
-                            <input type="hidden" name="google_book_id" value="{{ book.google_book_id }}">
-                            <input type="hidden" name="ISBN_13" value="{{ book.ISBN_13 }}">
-                            <input type="hidden" name="title" value="{{ book.title }}">
-                            <button type="submit" class="select-button">Select</button>
-                        </form> -->
+                        <!-- Drop down POPPER. Comes from bootstrap.min.css in BASE.html -->
+                        <div class="dropdown">
+                            <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Action
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">I own this! Add to my library</a></li>
+                                <li><a class="dropdown-item" href="#">I want this! Add to my wishlist</a></li>
+                                <li><a class="dropdown-item" href="http://www.amazon.com" target="_blank" >Buy</a></li>
+                            </ul>
+                        </div>
                     </li>
+                    <br>
                 {% endfor %}
             </ol>
         {% else %}

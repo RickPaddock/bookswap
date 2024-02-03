@@ -2,8 +2,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import (
     UserCreationForm,
 )  # Helps create user accounts. See django documentation
-
-# from django import forms
+from django.forms import ModelForm
+from .models import Wishlist
 
 
 # Create new user (note name is different to superclass)

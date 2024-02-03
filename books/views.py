@@ -6,7 +6,7 @@ from django.urls import reverse_lazy
 import requests
 from requests.exceptions import RequestException
 from json.decoder import JSONDecodeError
-from .models import Book
+from .models import Book, Group
 import os
 
 
@@ -32,6 +32,12 @@ def book_database(request):
     books_list = Book.objects.order_by("title")
     books_dict = {"books": books_list}
     return render(request, "book_database.html", context=books_dict)
+
+
+def group_database(request):
+    groups_list = Group.objects.order_by("group_name")
+    groups_dict = {"groups": groups_list}
+    return render(request, "group_database.html", context=groups_dict)
 
 
 class user_account(TemplateView):

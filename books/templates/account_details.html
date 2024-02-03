@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block body_block %}
+
+    <div class="container my-5">
+        <div class="p-5 text-center bg-body-tertiary rounded-3">
+            <h1 class="text-body-emphasis">{{request.user.username|upper}}</h1>
+            <h1 class="text-body-emphasis"><span lang="gr">Πληροφορίες λογαριασμού</span></h1>
+            <p class="lead">Account Information</p>
+        </div>
+    </div>
+
+{% endblock %}

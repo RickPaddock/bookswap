@@ -17,7 +17,15 @@ Including another URLconf
 from django.contrib import admin
 from django.conf import settings  # Required for debug toolbar
 from django.urls import path, include
-from books.views import index, LoggedInPage, LoggedOutPage, SignUp
+from books.views import (
+    index,
+    LoggedInPage,
+    LoggedOutPage,
+    SignUp,
+    book_search,
+    user_account,
+    book_database,
+)
 
 # Django provides login and logout views so we dont create them in views.py
 from django.contrib.auth import views as auth_views
@@ -32,6 +40,9 @@ urlpatterns = [
     path("loggedin", LoggedInPage.as_view(), name="loggedin"),
     path("loggedout", LoggedOutPage.as_view(), name="loggedout"),
     path("signup", SignUp.as_view(), name="signup"),
+    path("user_account/", user_account.as_view(), name="user_account"),
+    path("book_search/", book_search, name="book_search"),
+    path("books/", book_database, name="book_database"),
 ]
 
 # Required for debug toolbar

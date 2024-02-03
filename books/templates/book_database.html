@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block body_block %}
+
+    <div class="container my-5">
+        <div class="p-5 text-center bg-body-tertiary rounded-3">
+            <h1 class="text-body-emphasis">Books</h1>
+            <h1 class="text-body-emphasis"><span lang="gr">Ανταλλαγή βιβλίου</span></h1>
+            <p class="lead">List of all books</p>
+        </div>
+        <br>
+        {% if books %}
+            <ol>
+                {% for rec in books %}
+                <li> Title: {{rec.title}} </li>
+                <ul>
+                    <li> ISBN_13: {{rec.ISBN_13}}</li>
+                </ul>
+                <br>
+            {% endfor %}
+            </ol>
+            {% else %}
+                <p>NO BOOKS FOUND</p>
+        {% endif %}
+    </div>
+
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block body_block %}
+
+    <br>
+    <h1>Book Search</h1>
+
+    <!-- #TODO: move this to CSS -->
+    <style>
+        ol {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .select-button[disabled] {
+            background-color: Blue;
+            cursor: not-allowed;
+        }
+    </style>
+
+    {% if query %}
+        <h2>Search results for "{{ query }}"</h2>
+        {% if books %}
+            <ol>
+                {% for book in books %}
+                    <li>
+                        <h3>{{ book.title }}</h3>
+                        <p>Authors: {{ book.authors }}</p>
+                        <img src="{{ book.thumbnail }}" alt="{{ book.title }}">
+                        <p>{{ book.description|safe }}</p>
+                        <!-- Include form fields for each book -->
+                        <!-- <form action="{% url 'user_account' %}" method="post" >
+                            {% csrf_token %}
+                            <input type="hidden" name="google_book_id" value="{{ book.google_book_id }}">
+                            <input type="hidden" name="ISBN_13" value="{{ book.ISBN_13 }}">
+                            <input type="hidden" name="title" value="{{ book.title }}">
+                            <button type="submit" class="select-button">Select</button>
+                        </form> -->
+                    </li>
+                {% endfor %}
+            </ol>
+        {% else %}
+            <p>No results found.</p>
+        {% endif %}
+    {% endif %}
+    {% if form.errors %}
+        <p>Form errors: {{ form.errors }}</p>
+    {% endif %}
+
+{% endblock %}

@@ -7,6 +7,24 @@
             <h1 class="text-body-emphasis"><span lang="gr">Πληροφορίες λογαριασμού</span></h1>
             <p class="lead">Account Information</p>
         </div>
+        <br>
+        <div class="row">
+            <div class="col">
+                <p>Your Books:</p>
+                <ol>
+                    {% for book in books %}
+                        <li>{{ book.title }}</li>
+                        <br>
+                    {% empty %}
+                        <li>No books found.</li>
+                    {% endfor %}
+                </ol>
+            </div>
+            <div class="col">
+                <p>Your Groups:</p>
+
+            </div>
+        </div>
     </div>
 
 {% endblock %}

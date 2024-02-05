@@ -2,16 +2,16 @@
 {% block body_block %}
 
     <div class="container my-5">
-        <div class="p-5 text-center bg-body-tertiary rounded-3">
+        <div class="p-3 text-center bg-body-tertiary rounded-3">
             <h1 class="text-body-emphasis">Groups</h1>
-            <h1 class="text-body-emphasis"></h1>
             <p class="lead">List of all groups</p>
         </div>
         <br>
         {% if groups %}
             <ol>
                 {% for rec in groups %}
-                <li>{{rec.group_name}}: {{rec.description}} </li>
+                <li><b>{{rec.group_name}}</b></li>
+                <p>{{rec.description}}</p>
                 <ul>
                     <span class="badge">{{rec.members.count}}</span> member{{rec.members.count|pluralize}}
                 </ul>

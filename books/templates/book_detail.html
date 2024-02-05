@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block body_block %}
+
+    <div class="container my-5">
+        <div class="p-3 text-center bg-body-tertiary rounded-3">
+            <h1 class="text-body-emphasis">{{book.title}}</h1>
+        </div>
+        <br>
+        <div class="row">
+            <div class="col">
+                <ul>
+                    <p>Book Details:</p>
+                    <li>ISBN_13: {{book.ISBN_13}}</li>
+                    <li>google_book_id: {{book.google_book_id}}</li>
+                </ul>
+            </div>
+            <div class="col">
+                <ul>
+                    <p>{{book.owner.count}} owner{{book.owner.count|pluralize}}:</p>
+                    <li><em>list of owners here</em></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}

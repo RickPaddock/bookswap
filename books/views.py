@@ -1,12 +1,14 @@
 from django.shortcuts import render
-from django.views.generic import CreateView, TemplateView
+from django.views.generic import CreateView, TemplateView, ListView, DetailView
 from .forms import UserCreateForm
 from django.contrib import messages
 from django.urls import reverse_lazy
+from django.shortcuts import get_object_or_404
 import requests
 from requests.exceptions import RequestException
 from json.decoder import JSONDecodeError
 from .models import Book, Group
+from django.contrib.auth.mixins import LoginRequiredMixin
 import os
 
 
@@ -27,9 +29,9 @@ class SignUp(CreateView):
         return response
 
 
-# Testing a list of a model
+# Testing a list of a model: Return books with owners
 def book_database(request):
-    books_list = Book.objects.order_by("title")
+    books_list = Book.objects.filter(owner__isnull=False).order_by("title").distinct()
     books_dict = {"books": books_list}
     return render(request, "book_database.html", context=books_dict)
 
@@ -40,8 +42,13 @@ def group_database(request):
     return render(request, "group_database.html", context=groups_dict)
 
 
-class user_account(TemplateView):
+class UserBooksView(LoginRequiredMixin, ListView):
+    model = Book
     template_name = "account_details.html"
+    context_object_name = "books"
+
+    def get_queryset(self):
+        return super().get_queryset().filter(owner=self.request.user)
 
 
 class LoggedInPage(TemplateView):
@@ -50,6 +57,11 @@ class LoggedInPage(TemplateView):
 
 class LoggedOutPage(TemplateView):
     template_name = "loggedout.html"
+
+
+class SingleBook(DetailView):
+    model = Book
+    template_name = "book_detail.html"
 
 
 def get_book_section(item, section):

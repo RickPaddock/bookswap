@@ -40,15 +40,13 @@ class Group(models.Model):
 
 
 # Many to Many THROUGH table
+# TODO: User can have more than 1 copy so not unique by name/book
 class UserBook(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     book = models.ForeignKey(Book, on_delete=models.CASCADE)
 
     def __str__(self):
         return f"""{self.user}/{self.book}"""
-
-    class meta:
-        unique_together = ("user", "book")
 
     @classmethod
     def assign_book_to_user(cls, user, google_book_id):

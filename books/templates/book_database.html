@@ -2,16 +2,15 @@
 {% block body_block %}
 
     <div class="container my-5">
-        <div class="p-5 text-center bg-body-tertiary rounded-3">
+        <div class="p-3 text-center bg-body-tertiary rounded-3">
             <h1 class="text-body-emphasis">Books</h1>
-            <h1 class="text-body-emphasis"></h1>
-            <p class="lead">List of all books</p>
+            <p class="lead">List of all available books</p>
         </div>
         <br>
         {% if books %}
             <ol>
                 {% for rec in books %}
-                <li>{{rec.title}} </li>
+                <li><a href={{rec.ISBN_13}}>{{rec.title}}</a></li>
                 <ul>
                     ISBN_13: {{rec.ISBN_13}}<br>
                     Number of copies: <span class="badge">{{rec.owner.count}}</span>

@@ -15,9 +15,11 @@
                 </ul>
             </div>
             <div class="col">
+                <p>{{book.owner.count}} owner{{book.owner.count|pluralize}}:</p>
                 <ul>
-                    <p>{{book.owner.count}} owner{{book.owner.count|pluralize}}:</p>
-                    <li><em>list of owners here</em></li>
+                    {% for owner in owners %}
+                        <li>{{ owner.user.username }}</li>
+                    {% endfor %}
                 </ul>
             </div>
         </div>

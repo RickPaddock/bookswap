@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.views.generic import CreateView, TemplateView, ListView, DetailView
+from django.views.generic import CreateView, TemplateView, DetailView
 from .forms import UserCreateForm
 from django.contrib import messages
 from django.urls import reverse_lazy
@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404
 import requests
 from requests.exceptions import RequestException
 from json.decoder import JSONDecodeError
-from .models import Book, Group
+from .models import Book, Group, GroupMember, UserBook
 from django.contrib.auth.mixins import LoginRequiredMixin
 import os
 
@@ -42,13 +42,33 @@ def group_database(request):
     return render(request, "group_database.html", context=groups_dict)
 
 
-class UserBooksView(LoginRequiredMixin, ListView):
-    model = Book
+class UserAccount(LoginRequiredMixin, TemplateView):
+    # model = Book
     template_name = "account_details.html"
-    context_object_name = "books"
+    # context_object_name = "books"
 
-    def get_queryset(self):
-        return super().get_queryset().filter(owner=self.request.user)
+    # def get_queryset(self):
+    #    return super().get_queryset().filter(owner=self.request.user)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+
+        # Query the user's books
+        user_books = Book.objects.filter(owner=user).order_by("title")
+        user_book_count = UserBook.objects.filter(user=user).count()
+
+        # Query the number of groups the user belongs to
+        user_groups = Group.objects.filter(members=user).order_by("group_name")
+        user_group_count = GroupMember.objects.filter(user=user).count()
+
+        # Add the data to the context
+        context["user_books"] = user_books
+        context["user_book_count"] = user_book_count
+        context["user_groups"] = user_groups
+        context["user_group_count"] = user_group_count
+        # Add other model-related data as needed
+
+        return context
 
 
 class LoggedInPage(TemplateView):
@@ -62,6 +82,25 @@ class LoggedOutPage(TemplateView):
 class SingleBook(DetailView):
     model = Book
     template_name = "book_detail.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        book = self.get_object()
+        owners = book.book_owners.all()
+        context["owners"] = owners
+        return context
+
+
+class SingleGroup(DetailView):
+    model = Group
+    template_name = "group_detail.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        group = self.get_object()
+        members = group.group_memberships.all()
+        context["members"] = members
+        return context
 
 
 def get_book_section(item, section):

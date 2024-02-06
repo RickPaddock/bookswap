@@ -10,7 +10,7 @@
         {% if groups %}
             <ol>
                 {% for rec in groups %}
-                <li><b>{{rec.group_name}}</b></li>
+                <li><a href={{rec.slug}}>{{rec.group_name}}</a></li>
                 <p>{{rec.description}}</p>
                 <ul>
                     <span class="badge">{{rec.members.count}}</span> member{{rec.members.count|pluralize}}

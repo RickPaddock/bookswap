@@ -22,11 +22,12 @@ from books.views import (
     LoggedInPage,
     LoggedOutPage,
     SignUp,
-    UserBooksView,
+    UserAccount,
     book_search,
     book_database,
     group_database,
     SingleBook,
+    SingleGroup,
 )
 
 # Django provides login and logout views so we dont create them in views.py
@@ -42,11 +43,12 @@ urlpatterns = [
     path("loggedin", LoggedInPage.as_view(), name="loggedin"),
     path("loggedout", LoggedOutPage.as_view(), name="loggedout"),
     path("signup", SignUp.as_view(), name="signup"),
-    path("user_account/", UserBooksView.as_view(), name="user_account"),
+    path("user_account/", UserAccount.as_view(), name="user_account"),
     path("book_search/", book_search, name="book_search"),
     path("books/", book_database, name="book_database"),
     path("books/<str:pk>/", SingleBook.as_view(), name="single_book"),
     path("groups/", group_database, name="group_database"),
+    path("groups/<str:slug>/", SingleGroup.as_view(), name="single_group"),
 ]
 
 # Required for debug toolbar

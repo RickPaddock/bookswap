@@ -25,3 +25,4 @@ sqlparse==0.4.4
 tzdata==2023.3
 virtualenv==20.23.1
 requests==2.31
+Pillow==10.2.0

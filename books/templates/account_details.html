@@ -18,6 +18,14 @@
                 </ol>
             </div>
             <div class="col">
+                <p>You want {{ user_wish_count }} book{{ user_wish_count|pluralize }}:</p>
+                <ol>
+                    {% for wish in user_wish %}
+                        <li><a href="{% url 'single_book' pk=wish.book.pk %}">{{ wish.book.title }}</a></li>
+                    {% endfor %}
+                </ol>
+            </div>
+            <div class="col">
                 <p>You belong to {{ user_group_count }} group{{ user_group_count|pluralize }}:</p>
                 <ol>
                     {% for group in user_groups %}

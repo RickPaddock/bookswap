@@ -28,6 +28,9 @@ from books.views import (
     group_database,
     SingleBook,
     SingleGroup,
+    AddToLibraryView,
+    AddToLibraryConfirmView,
+    AddToWishListConfirmView,
 )
 
 # Django provides login and logout views so we dont create them in views.py
@@ -49,6 +52,17 @@ urlpatterns = [
     path("books/<str:pk>/", SingleBook.as_view(), name="single_book"),
     path("groups/", group_database, name="group_database"),
     path("groups/<str:slug>/", SingleGroup.as_view(), name="single_group"),
+    path("add-to-library/", AddToLibraryView.as_view(), name="add_to_library"),
+    path(
+        "add-to-library/confirm/",
+        AddToLibraryConfirmView.as_view(),
+        name="add_to_library_confirm",
+    ),
+    path(
+        "add-to-wishlist/confirm/",
+        AddToWishListConfirmView.as_view(),
+        name="add_to_wishlist_confirm",
+    ),
 ]
 
 # Required for debug toolbar

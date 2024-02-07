@@ -18,13 +18,19 @@ class CustomUser(AbstractUser):
 
 
 class Book(models.Model):
-    ISBN_13 = models.CharField(max_length=13, primary_key=True)
-    google_book_id = models.CharField(max_length=50, unique=True)
+    ID_ISBN_13 = models.CharField(max_length=13, null=True, unique=True)
+    ID_ISBN_10 = models.CharField(max_length=10, null=True, unique=True)
+    ID_OTHER = models.CharField(max_length=25, null=True, unique=True)
+    google_book_id = models.CharField(max_length=25, unique=True, blank=False)
     title = models.CharField(max_length=100, blank=False)
+    authors = models.CharField(max_length=100, blank=True)
+    thumbnail = models.ImageField(upload_to="images", null=True, blank=True)
+    description = models.CharField(max_length=500, blank=True)
+    pagecount = models.CharField(max_length=7, null=True, blank=True)
     owner = models.ManyToManyField(CustomUser, through="UserBook")
 
     def __str__(self):
-        return f"{self.title}/{self.ISBN_13}"
+        return f"{self.title}"
 
 
 class Group(models.Model):

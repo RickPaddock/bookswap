@@ -9,10 +9,10 @@
         <br>
         {% if books %}
             <ol>
-                {% for rec in books %}
-                <li><a href={{rec.ISBN_13}}>{{rec.title}}</a></li>
+            {% for rec in books %}
+                <li><a href="{% url 'single_book' pk=rec.pk %}">{{rec.title}}</a></li>
                 <ul>
-                    ISBN_13: {{rec.ISBN_13}}<br>
+                    Authors: {{rec.authors}}<br>
                     Number of copies: <span class="badge">{{rec.owner.count}}</span>
                 </ul>
                 <br>

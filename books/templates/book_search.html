@@ -18,9 +18,34 @@
                                 Action
                             </button>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#">I own this! Add to my library</a></li>
-                                <li><a class="dropdown-item" href="#">I want this! Add to my wishlist</a></li>
-                                <li><a class="dropdown-item" href="http://www.amazon.com" target="_blank" >Buy</a></li>
+                                <li>
+                                    <form method="post" action="{% url 'add_to_library' %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="add_to_library">
+                                        <input type="hidden" name="id_google" value="{{ book.id_google }}">
+                                        <input type="hidden" name="title" value="{{ book.title }}">
+                                        <input type="hidden" name="authors" value="{{ book.authors }}">
+                                        <input type="hidden" name="thumbnail" value="{{ book.thumbnail }}">
+                                        <input type="hidden" name="description" value="{{ book.description }}">
+                                        <input type="hidden" name="pageCount" value="{{ book.pageCount }}">
+                                        <button type="submit" class="dropdown-item">I own this! Add to my library</button>
+                                    </form>
+                                </li>
+                                <li>
+                                    <form method="post" action="{% url 'add_to_library' %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="add_to_wishlist">
+                                        <input type="hidden" name="id_google" value="{{ book.id_google }}">
+                                        <input type="hidden" name="title" value="{{ book.title }}">
+                                        <input type="hidden" name="authors" value="{{ book.authors }}">
+                                        <input type="hidden" name="thumbnail" value="{{ book.thumbnail }}">
+                                        <input type="hidden" name="description" value="{{ book.description }}">
+                                        <input type="hidden" name="pageCount" value="{{ book.pageCount }}">
+                                        <button type="submit" class="dropdown-item">I want this! Add to my wishlist</button>
+                                    </form>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="http://www.amazon.com" target="_blank" >Buy {{ book.title }} by {{ book.authors }}</a></li>
                             </ul>
                         </div>
                     </li>

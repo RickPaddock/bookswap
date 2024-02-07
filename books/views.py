@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404
 import requests
 from requests.exceptions import RequestException
 from json.decoder import JSONDecodeError
-from .models import Book, Group, GroupMember, UserBook
+from .models import Book, Group, GroupMember, UserBook, Wishlist
 from django.contrib.auth.mixins import LoginRequiredMixin
 import os
 
@@ -57,6 +57,10 @@ class UserAccount(LoginRequiredMixin, TemplateView):
         user_books = Book.objects.filter(owner=user).order_by("title")
         user_book_count = UserBook.objects.filter(user=user).count()
 
+        # Query the user's book wishes
+        user_wish = Wishlist.objects.filter(user=user)
+        user_wish_count = Wishlist.objects.filter(user=user).count()
+
         # Query the number of groups the user belongs to
         user_groups = Group.objects.filter(members=user).order_by("group_name")
         user_group_count = GroupMember.objects.filter(user=user).count()
@@ -64,6 +68,8 @@ class UserAccount(LoginRequiredMixin, TemplateView):
         # Add the data to the context
         context["user_books"] = user_books
         context["user_book_count"] = user_book_count
+        context["user_wish"] = user_wish
+        context["user_wish_count"] = user_wish_count
         context["user_groups"] = user_groups
         context["user_group_count"] = user_group_count
         # Add other model-related data as needed
@@ -110,23 +116,41 @@ def get_book_section(item, section):
 def process_book_item(item):
 
     # Pull back individual json sections of the selected book
-    id_info = get_book_section(item, "id")
+    id_google = get_book_section(item, "id")
     book_info = get_book_section(item, "volumeInfo")
-    ibans = get_book_section(book_info, "industryIdentifiers")
 
     title = book_info.get("title", "N/A")
     authors = ", ".join(book_info.get("authors", ["N/A"]))
     thumbnail = book_info.get("imageLinks", {}).get("thumbnail", "")
     description = book_info.get("description", "N/A")
-    ibans = book_info.get("ibans", "N/A")
+    pageCount = book_info.get("pageCount", "N/A")
+    identifiers = book_info.get("industryIdentifiers", "N/A")
+
+    ID_ISBN_13 = "N/A"
+    ID_ISBN_10 = "N/A"
+    ID_OTHER = "N/A"
+
+    for i in identifiers:
+        try:
+            if i["type"] == "ISBN_13":
+                ID_ISBN_13 = i["identifier"]
+            if i["type"] == "ISBN_10":
+                ID_ISBN_10 = i["identifier"]
+            if i["type"] == "OTHER":
+                ID_OTHER = i["identifier"]
+        except:
+            pass
 
     return {
-        "id_google": id_info,
+        "id_google": id_google,
         "title": title,
         "authors": authors,
         "thumbnail": thumbnail,
         "description": description,
-        "ibans": ibans,
+        "pageCount": pageCount,
+        "ID_ISBN_13": ID_ISBN_13,
+        "ID_ISBN_10": ID_ISBN_10,
+        "ID_OTHER": ID_OTHER,
     }
 
 
@@ -177,3 +201,61 @@ def book_search(request):
                 )
 
     return render(request, "book_search.html")
+
+
+from django.views.generic import View
+from django.shortcuts import redirect
+from .models import CustomUser, Book
+
+
+class AddToLibraryView(View):
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        action = request.POST.get("action")
+        id_google = request.POST.get("id_google")
+        title = request.POST.get("title")
+        authors = request.POST.get("authors")
+        thumbnail = request.POST.get("thumbnail")
+        description = request.POST.get("description")
+        pageCount = request.POST.get("pageCount")
+        ID_ISBN_13 = request.POST.get("ID_ISBN_13")
+        ID_ISBN_10 = request.POST.get("ID_ISBN_10")
+        ID_OTHER = request.POST.get("ID_OTHER")
+
+        if id_google and title:
+            try:
+                book, created = Book.objects.get_or_create(
+                    google_book_id=id_google,
+                    title=title,
+                    authors=authors,
+                    thumbnail=thumbnail,
+                    description=description,
+                    pagecount=pageCount,
+                    ID_ISBN_13=ID_ISBN_13,
+                    ID_ISBN_10=ID_ISBN_10,
+                    ID_OTHER=ID_OTHER,
+                )
+                if action == "add_to_library":
+                    user.book_set.add(book)
+                    return redirect(
+                        "add_to_library_confirm"
+                    )  # Redirect to a confirmation page
+                elif action == "add_to_wishlist":
+                    Wishlist.objects.get_or_create(user=user, book=book)
+                    return redirect(
+                        "add_to_wishlist_confirm"
+                    )  # Redirect to a confirmation page
+
+            except Exception as e:
+                print("Exception!", str(e))
+                return redirect(
+                    "user_account"
+                )  # Redirect back to user account page if ISBN or title is not provided or if book creation fails
+
+
+class AddToLibraryConfirmView(TemplateView):
+    template_name = "add_to_library_confirm.html"
+
+
+class AddToWishListConfirmView(TemplateView):
+    template_name = "add_to_wishlist_confirm.html"

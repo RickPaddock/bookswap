@@ -9,9 +9,16 @@
         <div class="row">
             <div class="col">
                 <ul>
-                    <p>Book Details:</p>
-                    <li>ISBN_13: {{book.ISBN_13}}</li>
-                    <li>google_book_id: {{book.google_book_id}}</li>
+                    {% if book.thumbnail %}
+                        <img src="{{ MEDIA_URL }}{{ book.thumbnail }}" alt="{{ book.title }}">
+                    {% else %}
+                        <!-- Placeholder image or alternative content if thumbnail is not available -->
+                        <p>No thumbnail available</p>
+                    {% endif %}
+                    <li>Authors: {{book.authors}}</li>
+                    <li>Page Count: {{book.pagecount}}</li>
+                    <br>
+                    <li>Description: {{book.description|safe}}</li>
                 </ul>
             </div>
             <div class="col">

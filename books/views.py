@@ -1,9 +1,10 @@
 from django.shortcuts import render
-from django.views.generic import CreateView, TemplateView, DetailView
+from django.views.generic import CreateView, TemplateView, DetailView, RedirectView
 from .forms import UserCreateForm
 from django.contrib import messages
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.shortcuts import get_object_or_404
+from django.db import IntegrityError
 import requests
 from requests.exceptions import RequestException
 from json.decoder import JSONDecodeError
@@ -35,6 +36,36 @@ class CreateGroup(LoginRequiredMixin, CreateView):
     success_url = reverse_lazy("group_database")
 
 
+class JoinGroup(LoginRequiredMixin, RedirectView):
+
+    # Once action is performed, where should they go
+    def get_redirect_url(self, *args, **kwargs):
+        # Get group 'slug' of page user is clicking into and go to group page
+        return reverse("single_group", kwargs={"slug": self.kwargs.get("slug")})
+
+    # Check if user can perform action
+    def get(self, request, *args, **kwargs):
+        group = get_object_or_404(Group, slug=self.kwargs.get("slug"))
+        GroupMember.objects.create(user=self.request.user, group=group)
+        return super().get(request, *args, **kwargs)
+
+
+class LeaveGroup(LoginRequiredMixin, RedirectView):
+
+    # Once action is performed, where should they go
+    def get_redirect_url(self, *args, **kwargs):
+        # Get group 'slug' of page user is clicking into and go to group page
+        return reverse("single_group", kwargs={"slug": self.kwargs.get("slug")})
+
+    # Check if user can perform action
+    def get(self, request, *args, **kwargs):
+        membership = GroupMember.objects.filter(
+            user=self.request.user, group__slug=self.kwargs.get("slug")
+        ).get()
+        membership.delete()
+        return super().get(request, *args, **kwargs)
+
+
 # Testing a list of a model: Return books with owners
 def book_database(request):
     books_list = Book.objects.filter(owner__isnull=False).order_by("title").distinct()
@@ -48,26 +79,28 @@ def group_database(request):
     return render(request, "group_database.html", context=groups_dict)
 
 
-class UserAccount(LoginRequiredMixin, TemplateView):
+class UserAccount(TemplateView):
     template_name = "account_details.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        user = self.request.user
+        user_pk = self.kwargs["pk"]  # obtain elements from URL
+        user_username = get_object_or_404(CustomUser, id=user_pk)
 
         # Query the user's books
-        user_books = Book.objects.filter(owner=user).order_by("title")
-        user_book_count = UserBook.objects.filter(user=user).count()
+        user_books = Book.objects.filter(owner=user_pk).order_by("title")
+        user_book_count = UserBook.objects.filter(user=user_pk).count()
 
         # Query the user's book wishes
-        user_wish = Wishlist.objects.filter(user=user)
-        user_wish_count = Wishlist.objects.filter(user=user).count()
+        user_wish = Wishlist.objects.filter(user=user_pk)
+        user_wish_count = Wishlist.objects.filter(user=user_pk).count()
 
         # Query the number of groups the user belongs to
-        user_groups = Group.objects.filter(members=user).order_by("group_name")
-        user_group_count = GroupMember.objects.filter(user=user).count()
+        user_groups = Group.objects.filter(members=user_pk).order_by("group_name")
+        user_group_count = GroupMember.objects.filter(user=user_pk).count()
 
         # Add the data to the context
+        context["user_username"] = user_username
         context["user_books"] = user_books
         context["user_book_count"] = user_book_count
         context["user_wish"] = user_wish
@@ -95,7 +128,14 @@ class SingleBook(DetailView):
         context = super().get_context_data(**kwargs)
         book = self.get_object()
         owners = book.book_owners.all()
+
+        book_pk = self.kwargs["pk"]  # obtain elements from URL
+        user_wish = Wishlist.objects.filter(book=book_pk)
+        user_wish_count = Wishlist.objects.filter(book=book_pk).count()
+
         context["owners"] = owners
+        context["user_wish"] = user_wish
+        context["user_wish_count"] = user_wish_count
         return context
 
 

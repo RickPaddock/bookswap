@@ -5,6 +5,13 @@
         <div class="p-3 text-center bg-body-tertiary rounded-3">
             <h1 class="text-body-emphasis">{{group.group_name}}</h1>
             <h3>{{group.description}}</h3>
+            {% if user.is_authenticated %}
+                {% if user in group.members.all %} <!-- if logged in user already exists in model class group -->
+                    <a href = "{%url 'leave_group' slug=group.slug %}" class='btn btn-lg btn-fill btn-warning'><span class='glyphicon glyphicon-remove-circle'></span> Leave</a>
+                {% else %}
+                    <a href = "{%url 'join_group' slug=group.slug %}" class='btn btn-lg btn-fill btn-warning'><span class='glyphicon glyphicon-ok-circle'></span> Join</a>
+                {% endif %}
+            {% endif %}
         </div>
         <br>
         <div class="row">
@@ -18,7 +25,8 @@
                 <p>{{group.members.count}} member{{group.members.count|pluralize}}:</p>
                 <ul>
                     {% for member in members %}
-                        <li>{{ member.user.username }}</li>
+                        <li><a href="{% url 'user_account' pk=member.user.pk %}">{{ member.user.username }}</a></li>
+                        <p>Admin: {{ member.admin }}</p>
                     {% endfor %}
                 </ul>
             </div>

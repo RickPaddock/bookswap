@@ -23,11 +23,19 @@
             </div>
             <div class="col">
                 <p>{{book.owner.count}} owner{{book.owner.count|pluralize}}:</p>
-                <ul>
+                <ol>
                     {% for owner in owners %}
                         <li><a href="{% url 'user_account' pk=owner.user.pk %}">{{ owner.user.username }}</a></li>
                     {% endfor %}
-                </ul>
+                </ol>
+            </div>
+            <div class="col">
+                <p>{{user_wish_count}} wisher{{user_wish_count|pluralize}}:</p>
+                <ol>
+                    {% for wisher in user_wish %}
+                        <li><a href="{% url 'user_account' pk=wisher.user.pk %}">{{ wisher.user.username }}</a></li>
+                    {% endfor %}
+                </ol>
             </div>
         </div>
     </div>

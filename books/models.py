@@ -18,10 +18,10 @@ class CustomUser(AbstractUser):
 
 
 class Book(models.Model):
+    google_book_id = models.CharField(max_length=25, primary_key=True)
     ID_ISBN_13 = models.CharField(max_length=13, null=True, unique=True)
     ID_ISBN_10 = models.CharField(max_length=10, null=True, unique=True)
     ID_OTHER = models.CharField(max_length=25, null=True, unique=True)
-    google_book_id = models.CharField(max_length=25, unique=True, blank=False)
     title = models.CharField(max_length=100, blank=False)
     authors = models.CharField(max_length=100, blank=True)
     thumbnail = models.ImageField(upload_to="images", null=True, blank=True)
@@ -159,7 +159,7 @@ class Wishlist(models.Model):
 
 # Runs automatically when transaction is created
 @receiver(post_save, sender=Transaction)
-def update_wishlist(instance, created, **kwargs):
+def update_wishlist_transaction(instance, created, **kwargs):
     """
     Update Wishlist when a user's wish comes true and they lend the book
     """
@@ -167,6 +167,23 @@ def update_wishlist(instance, created, **kwargs):
     if created:
         if wishlist_entry := Wishlist.objects.filter(
             user=instance.borrower, book=instance.book
+        ).first():
+            wishlist_entry.removed_datetime = timezone.now()
+            wishlist_entry.save()
+
+
+# Runs automatically when user adds new book ownership
+@receiver(post_save, sender=UserBook)
+def update_wishlist_ownership(sender, instance, created, **kwargs):
+    """
+    Update Wishlist when a user now owns the book the wished to have
+    """
+    # If new ownership is created, then update removed_datetime
+    print("RICK - It ran")
+    if created:
+        print("Inside created")
+        if wishlist_entry := Wishlist.objects.filter(
+            user=instance.user, book=instance.book
         ).first():
             wishlist_entry.removed_datetime = timezone.now()
             wishlist_entry.save()

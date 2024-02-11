@@ -25,7 +25,7 @@
                 <p>{{book.owner.count}} owner{{book.owner.count|pluralize}}:</p>
                 <ul>
                     {% for owner in owners %}
-                        <li>{{ owner.user.username }}</li>
+                        <li><a href="{% url 'user_account' pk=owner.user.pk %}">{{ owner.user.username }}</a></li>
                     {% endfor %}
                 </ul>
             </div>

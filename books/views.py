@@ -43,12 +43,8 @@ def group_database(request):
 
 
 class UserAccount(LoginRequiredMixin, TemplateView):
-    # model = Book
     template_name = "account_details.html"
-    # context_object_name = "books"
 
-    # def get_queryset(self):
-    #    return super().get_queryset().filter(owner=self.request.user)
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user = self.request.user
@@ -208,7 +204,7 @@ from django.shortcuts import redirect
 from .models import CustomUser, Book
 
 
-class AddToLibraryView(View):
+class AddToLibraryWishView(View):
     def post(self, request, *args, **kwargs):
         user = request.user
         action = request.POST.get("action")

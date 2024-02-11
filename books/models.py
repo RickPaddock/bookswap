@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
+import misaka  # Misaka allows rendering markdown
 
 
 # User model imports pre-defined django user items. Easier for us.
@@ -38,15 +39,22 @@ class Group(models.Model):
     # SLUG only contains letters, numbers, underscores, or hyphens
     slug = models.SlugField(allow_unicode=True, unique=True)
     description = models.TextField(blank=True, default="")
+    description_html = models.TextField(editable=False, default="", blank=True)
     is_private = models.BooleanField(default=False, blank=False)
     members = models.ManyToManyField(CustomUser, through="GroupMember")
 
     def __str__(self):
         return self.group_name
 
+    def save(self, *args, **kwargs):
+        self.slug = slugify(self.group_name)  # Lowercase & replace spaces with hyphens
+        self.description_html = misaka.html(self.description)  # Allows markdown
+        super().save(
+            *args, **kwargs
+        )  # Overrides parent class save to include parameters
+
 
 # Many to Many THROUGH table
-# TODO: User can have more than 1 copy so not unique by name/book
 class UserBook(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     book = models.ForeignKey(Book, related_name="book_owners", on_delete=models.CASCADE)

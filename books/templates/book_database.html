@@ -12,6 +12,12 @@
             {% for rec in books %}
                 <li><a href="{% url 'single_book' pk=rec.pk %}">{{rec.title}}</a></li>
                 <ul>
+                    {% if rec.thumbnail %}
+                        <img src="{{ MEDIA_URL }}{{ rec.thumbnail }}" alt="{{ rec.title }}"><br>
+                    {% else %}
+                        <!-- Placeholder image or alternative content if thumbnail is not available -->
+                        <p>No thumbnail available</p>
+                    {% endif %}
                     Authors: {{rec.authors}}<br>
                     Number of copies: <span class="badge">{{rec.owner.count}}</span>
                 </ul>

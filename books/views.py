@@ -29,6 +29,12 @@ class SignUp(CreateView):
         return response
 
 
+class CreateGroup(LoginRequiredMixin, CreateView):
+    model = Group
+    fields = ("group_name", "description", "is_private")
+    success_url = reverse_lazy("group_database")
+
+
 # Testing a list of a model: Return books with owners
 def book_database(request):
     books_list = Book.objects.filter(owner__isnull=False).order_by("title").distinct()

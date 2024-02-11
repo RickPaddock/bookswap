@@ -6,21 +6,32 @@
             <h1 class="text-body-emphasis">Groups</h1>
             <p class="lead">List of all groups</p>
         </div>
-        <br>
-        {% if groups %}
-            <ol>
-                {% for rec in groups %}
-                <li><a href={{rec.slug}}>{{rec.group_name}}</a></li>
-                <p>{{rec.description}}</p>
-                <ul>
-                    <span class="badge">{{rec.members.count}}</span> member{{rec.members.count|pluralize}}
-                </ul>
+        <div class="row">
+            <div class="col">
                 <br>
-            {% endfor %}
-            </ol>
-            {% else %}
-                <p>NO GROUPS FOUND</p>
-        {% endif %}
+                {% if groups %}
+                    <ol>
+                        {% for rec in groups %}
+                        <li><a href={{rec.slug}}>{{rec.group_name}}</a></li>
+                        <p>{{rec.description}}</p>
+                        <ul>
+                            <span class="badge">{{rec.members.count}}</span> member{{rec.members.count|pluralize}}
+                        </ul>
+                        <br>
+                    {% endfor %}
+                    </ol>
+                    {% else %}
+                        <p>NO GROUPS FOUND</p>
+                {% endif %}
+            </div>
+            <div class="col">
+                {% if user.is_authenticated %}
+                    <br>
+                    <a href="{% url 'create_group'%}" class='btn btn-lg btn-fill btn-warning'><span class='glyphicon glyphicon-plus-sign'>Create New Group!</span></a>
+                    <br>
+                {% endif %}
+            </div>
+        </div>
     </div>
 
 {% endblock %}

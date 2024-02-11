@@ -26,3 +26,4 @@ tzdata==2023.3
 virtualenv==20.23.1
 requests==2.31
 Pillow==10.2.0
+misaka==2.1.1

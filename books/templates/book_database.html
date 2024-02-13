@@ -7,26 +7,22 @@
             <p class="lead">List of all available books</p>
         </div>
         <br>
-        {% if books %}
-            <ol>
-            {% for rec in books %}
-                <li><a href="{% url 'single_book' pk=rec.pk %}">{{rec.title}}</a></li>
-                <ul>
-                    {% if rec.thumbnail %}
-                        <img src="{{ MEDIA_URL }}{{ rec.thumbnail }}" alt="{{ rec.title }}"><br>
-                    {% else %}
-                        <!-- Placeholder image or alternative content if thumbnail is not available -->
-                        <p>No thumbnail available</p>
+        <div class="container">
+            <div class="row">
+                {% for book in books %}
+                    <!-- md-2 = large screen, sm-4 = medium, xs-6 = small. img-fluid below ensures fluidity -->
+                    <div class="col-md-2 col-sm-4 col-xs-6">
+                        <!-- <a href="{% url 'single_book' pk=book.pk %}">{{book.title}}</a> -->
+                        <a href="{% url 'single_book' pk=book.pk %}"><img src="{{ book.thumbnail }}" class="img-fluid" alt="{{ book.title }}"></a>
+                        Copies: <span class="badge">{{book.owner.count}}</span>
+                        <!-- Authors: {{book.authors}}<br> -->
+                    </div>
+                    {% if forloop.counter|divisibleby:6 %}
+                        </div><div class="row"> <!-- Make new row every 7 thumbnails (for large screen)-->
                     {% endif %}
-                    Authors: {{rec.authors}}<br>
-                    Number of copies: <span class="badge">{{rec.owner.count}}</span>
-                </ul>
-                <br>
-            {% endfor %}
-            </ol>
-            {% else %}
-                <p>NO BOOKS FOUND</p>
-        {% endif %}
+                {% endfor %}
+            </div>
+        </div>
     </div>
 
 {% endblock %}

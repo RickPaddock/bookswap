@@ -25,7 +25,12 @@
                 <p>{{book.owner.count}} owner{{book.owner.count|pluralize}}:</p>
                 <ol>
                     {% for owner in owners %}
-                        <li><a href="{% url 'user_account' pk=owner.user.pk %}">{{ owner.user.username }}</a></li>
+                        <li>
+                            <a href="{% url 'user_account' pk=owner.user.pk %}">{{ owner.user.username }}</a>
+                            {% if user.is_authenticated and user.username != owner.user.username %}
+                                <a href="{% url 'user_account' pk=owner.user.pk %}" class='btn btn-sm btn-outline-warning'>Request</a>
+                            {% endif %}
+                        </li>
                     {% endfor %}
                 </ol>
             </div>

@@ -1,14 +1,21 @@
 from django.shortcuts import render
-from django.views.generic import CreateView, TemplateView, DetailView, RedirectView
-from .forms import UserCreateForm
+from django.views.generic import (
+    CreateView,
+    TemplateView,
+    DetailView,
+    RedirectView,
+    UpdateView,
+)
+from .forms import UserCreateForm, RequestStatusForm
 from django.contrib import messages
 from django.urls import reverse_lazy, reverse
 from django.shortcuts import get_object_or_404
 from django.db import IntegrityError
+from django.http import HttpResponseRedirect
 import requests
 from requests.exceptions import RequestException
 from json.decoder import JSONDecodeError
-from .models import Book, Group, GroupMember, UserBook, Wishlist
+from .models import Book, Group, GroupMember, UserBook, Wishlist, RequestBook
 from django.contrib.auth.mixins import LoginRequiredMixin
 import os
 
@@ -99,6 +106,22 @@ class UserAccount(TemplateView):
         user_groups = Group.objects.filter(members=user_pk).order_by("group_name")
         user_group_count = GroupMember.objects.filter(user=user_pk).count()
 
+        # Query the number of requests the user has made. Open and Closed
+        user_requests_open = RequestBook.objects.filter(
+            requester=user_pk, decision_datetime__isnull=True
+        ).order_by("request_datetime")
+        user_requests_closed = RequestBook.objects.filter(
+            requester=user_pk, decision_datetime__isnull=False
+        ).order_by("request_datetime")
+
+        # Query the number of requests the user has recieved. Open and Closed
+        user_requests_your_book_open = RequestBook.objects.filter(
+            owner=user_pk, decision_datetime__isnull=True
+        ).order_by("request_datetime")
+        user_requests_your_book_closed = RequestBook.objects.filter(
+            owner=user_pk, decision_datetime__isnull=False
+        ).order_by("request_datetime")
+
         # Add the data to the context
         context["user_username"] = user_username
         context["user_books"] = user_books
@@ -107,7 +130,18 @@ class UserAccount(TemplateView):
         context["user_wish_count"] = user_wish_count
         context["user_groups"] = user_groups
         context["user_group_count"] = user_group_count
-        # Add other model-related data as needed
+        context["user_requests_open"] = user_requests_open
+        context["user_requests_open_count"] = user_requests_open.count()
+        context["user_requests_closed"] = user_requests_closed
+        context["user_requests_closed_count"] = user_requests_closed.count()
+        context["user_requests_your_book_open"] = user_requests_your_book_open
+        context[
+            "user_requests_your_book_open_count"
+        ] = user_requests_your_book_open.count()
+        context["user_requests_your_book_closed"] = user_requests_your_book_closed
+        context[
+            "user_requests_your_book_closed_count"
+        ] = user_requests_your_book_closed.count()
 
         return context
 
@@ -133,9 +167,29 @@ class SingleBook(DetailView):
         user_wish = Wishlist.objects.filter(book=book_pk)
         user_wish_count = Wishlist.objects.filter(book=book_pk).count()
 
+        # Only check for certain things if user is logged in
+        if self.request.user.is_authenticated:
+            user = self.request.user
+
+            # Check if logged in user owns the book
+            is_owner = owners.filter(user=user).exists()
+
+            # If user requested the book, extract list of owners
+            user_requests = RequestBook.objects.filter(
+                book=book, requester=user, decision_datetime__isnull=True
+            )
+            requested_owner_usernames = user_requests.values_list(
+                "owner__username", flat=True
+            )
+        else:
+            requested_owner_usernames = []
+            is_owner = False
+
         context["owners"] = owners
+        context["is_owner"] = is_owner
         context["user_wish"] = user_wish
         context["user_wish_count"] = user_wish_count
+        context["requested_owner_usernames"] = requested_owner_usernames
         return context
 
 
@@ -292,7 +346,7 @@ class AddToLibraryWishView(View):
                 print("Exception!", str(e))
                 return redirect(
                     "user_account"
-                )  # Redirect back to user account page if ISBN or title is not provided or if book creation fails
+                )  # Redirect back to user account if book creation fails
 
 
 class AddToLibraryConfirmView(TemplateView):
@@ -301,3 +355,19 @@ class AddToLibraryConfirmView(TemplateView):
 
 class AddToWishListConfirmView(TemplateView):
     template_name = "add_to_wishlist_confirm.html"
+
+
+class RequestRaisedView(LoginRequiredMixin, UpdateView):
+    def post(self, request, *args, **kwargs):
+        requester_id = request.POST.get("requester")
+        owner_id = request.POST.get("owner")
+        google_book_id = request.POST.get("google_book_id")
+        if requester_id and owner_id and google_book_id:
+            RequestBook.objects.get_or_create(
+                requester=CustomUser.objects.get(pk=requester_id),
+                owner=CustomUser.objects.get(pk=owner_id),
+                book=Book.objects.get(pk=google_book_id),
+            )
+            return HttpResponseRedirect(
+                reverse("single_book", kwargs={"pk": google_book_id})
+            )

@@ -8,6 +8,44 @@
             <p class="lead">Account Information</p>
         </div>
         <br>
+        {% if user.is_authenticated and user.username == user_username.username %}
+            <div class="row">
+                <div class="col">
+                    <p>Your {{user_requests_open_count}} requests (pending):</p>
+                    <ol>
+                        {% for open_requests in user_requests_open %}
+                            <li>{{ open_requests }}</li>
+                        {% endfor %}
+                    </ol>
+                    <p>Your {{user_requests_closed_count}} requests (approved):</p>
+                    <ol>
+                        {% for closed_requests in user_requests_closed %}
+                            <li>{{ closed_requests }}</li>
+                        {% endfor %}
+                    </ol>
+                </div>
+                <div class="col">
+                    <p>{{user_requests_your_book_open_count}} requested from you (pending):</p>
+                    <ol>
+                        {% for open_requests_yours in user_requests_your_book_open %}
+                            <li>{{ open_requests_yours }}
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-sm btn-success">Approve</button>
+                                    <button type="button" class="btn btn-sm btn-danger">Reject</button>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ol>
+                    <p>{{user_requests_your_book_closed_count}}  requested from you (approved):</p>
+                    <ol>
+                        {% for closed_requests_yours in user_requests_your_book_closed %}
+                            <li>{{ closed_requests_yours }}</li>
+                        {% endfor %}
+                    </ol>
+                </div>
+            </div>
+            <hr>
+        {% endif %}
         <div class="row">
             <div class="col">
                 <p>You have {{ user_book_count }} book{{ user_book_count|pluralize }}:</p>

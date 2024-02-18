@@ -3,7 +3,7 @@ from django.contrib.auth.forms import (
     UserCreationForm,
 )  # Helps create user accounts. See django documentation
 from django.forms import ModelForm
-from .models import Wishlist
+from .models import RequestBook
 
 
 # Create new user (note name is different to superclass)
@@ -20,3 +20,9 @@ class UserCreateForm(UserCreationForm):
         # Labels show on the template
         self.fields["username"].label = "Display Name"
         self.fields["email"].label = "Email Address"
+
+
+class RequestStatusForm(ModelForm):
+    class Meta:
+        model = RequestBook
+        fields = ["decision"]

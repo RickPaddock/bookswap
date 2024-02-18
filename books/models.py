@@ -36,7 +36,6 @@ class Book(models.Model):
 
 class Group(models.Model):
     group_name = models.CharField(max_length=255, unique=True)
-    # SLUG only contains letters, numbers, underscores, or hyphens
     slug = models.SlugField(allow_unicode=True, unique=True)
     description = models.TextField(blank=True, default="")
     description_html = models.TextField(editable=False, default="", blank=True)
@@ -195,3 +194,27 @@ def update_wishlist_ownership(sender, instance, created, **kwargs):
         ).first():
             wishlist_entry.removed_datetime = timezone.now()
             wishlist_entry.save()
+
+
+class RequestBook(models.Model):
+    owner = models.ForeignKey(
+        CustomUser,
+        related_name="request_book_owner",
+        on_delete=models.CASCADE,
+        blank=False,
+    )
+    requester = models.ForeignKey(
+        CustomUser, related_name="book_requester", on_delete=models.CASCADE, blank=False
+    )
+    book = models.ForeignKey(
+        Book, related_name="request_book", on_delete=models.CASCADE, blank=False
+    )
+    request_datetime = models.DateTimeField(default=timezone.now, blank=False)
+    decision = models.BooleanField(null=True, blank=True)
+    decision_datetime = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.requester} requested {self.book} from {self.owner}"
+
+    class Meta:
+        unique_together = ("owner", "requester", "book", "request_datetime")

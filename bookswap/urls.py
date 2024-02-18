@@ -34,6 +34,7 @@ from books.views import (
     AddToLibraryWishView,
     AddToLibraryConfirmView,
     AddToWishListConfirmView,
+    RequestRaisedView,
 )
 
 # Django provides login and logout views so we dont create them in views.py
@@ -68,6 +69,11 @@ urlpatterns = [
         "add-to-wishlist/confirm/",
         AddToWishListConfirmView.as_view(),
         name="add_to_wishlist_confirm",
+    ),
+    path(
+        "request_raised/",
+        RequestRaisedView.as_view(),
+        name="request_raised",
     ),
 ]
 

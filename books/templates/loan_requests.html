@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block body_block %}
+
+    <div class="container my-5">
+        <div class="p-3 text-center bg-body-tertiary rounded-3">
+            <h1 class="text-body-emphasis">Books</h1>
+            <p class="lead">List of requests</p>
+        </div>
+        <br>
+    </div>
+
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+
+    <h1>Loan Requests</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Book</th>
+                <th>Requester</th>
+                <th>Request Datetime</th>
+                <th>Decision</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for request_book in user_owner_requests %}
+                <tr>
+                    <td><a href="{% url 'single_book' pk=request_book.pk %}">{{ request_book.book }}</a></td>
+                    <td><a href="{% url 'user_account' pk=request_book.requester.pk %}">{{ request_book.requester }}</a></td>
+                    <td>{{ request_book.request_datetime }}</td>
+                    <td>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-sm btn-success">Approve</button>
+                            <button type="button" class="btn btn-sm btn-danger">Reject</button>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+        <tbody>
+            {% for request_book in user_owner_requests_complete %}
+                <tr>
+                    <td><a href="{% url 'single_book' pk=request_book.pk %}">{{ request_book.book }}</a></td>
+                    <td><a href="{% url 'user_account' pk=request_book.requester.pk %}">{{ request_book.requester }}</a></td>
+                    <td>{{ request_book.request_datetime }}</td>
+                    <td>{{ request_book.decision }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+{% endblock %}

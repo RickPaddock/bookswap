@@ -5,6 +5,8 @@ from django.views.generic import (
     DetailView,
     RedirectView,
     UpdateView,
+    ListView,
+    View,
 )
 from .forms import UserCreateForm, RequestStatusForm
 from django.contrib import messages
@@ -15,9 +17,18 @@ from django.http import HttpResponseRedirect
 import requests
 from requests.exceptions import RequestException
 from json.decoder import JSONDecodeError
-from .models import Book, Group, GroupMember, UserBook, Wishlist, RequestBook
+from .models import (
+    Book,
+    CustomUser,
+    Group,
+    GroupMember,
+    UserBook,
+    Wishlist,
+    RequestBook,
+)
 from django.contrib.auth.mixins import LoginRequiredMixin
 import os
+from django.shortcuts import redirect
 
 
 def index(request):
@@ -110,16 +121,10 @@ class UserAccount(TemplateView):
         user_requests_open = RequestBook.objects.filter(
             requester=user_pk, decision_datetime__isnull=True
         ).order_by("request_datetime")
-        user_requests_closed = RequestBook.objects.filter(
-            requester=user_pk, decision_datetime__isnull=False
-        ).order_by("request_datetime")
 
         # Query the number of requests the user has recieved. Open and Closed
-        user_requests_your_book_open = RequestBook.objects.filter(
+        user_requests_recieved_open = RequestBook.objects.filter(
             owner=user_pk, decision_datetime__isnull=True
-        ).order_by("request_datetime")
-        user_requests_your_book_closed = RequestBook.objects.filter(
-            owner=user_pk, decision_datetime__isnull=False
         ).order_by("request_datetime")
 
         # Add the data to the context
@@ -130,18 +135,10 @@ class UserAccount(TemplateView):
         context["user_wish_count"] = user_wish_count
         context["user_groups"] = user_groups
         context["user_group_count"] = user_group_count
-        context["user_requests_open"] = user_requests_open
         context["user_requests_open_count"] = user_requests_open.count()
-        context["user_requests_closed"] = user_requests_closed
-        context["user_requests_closed_count"] = user_requests_closed.count()
-        context["user_requests_your_book_open"] = user_requests_your_book_open
         context[
-            "user_requests_your_book_open_count"
-        ] = user_requests_your_book_open.count()
-        context["user_requests_your_book_closed"] = user_requests_your_book_closed
-        context[
-            "user_requests_your_book_closed_count"
-        ] = user_requests_your_book_closed.count()
+            "user_requests_recieved_open_count"
+        ] = user_requests_recieved_open.count()
 
         return context
 
@@ -299,11 +296,6 @@ def book_search(request):
     return render(request, "book_search.html")
 
 
-from django.views.generic import View
-from django.shortcuts import redirect
-from .models import CustomUser, Book
-
-
 class AddToLibraryWishView(View):
     def post(self, request, *args, **kwargs):
         user = request.user
@@ -371,3 +363,27 @@ class RequestRaisedView(LoginRequiredMixin, UpdateView):
             return HttpResponseRedirect(
                 reverse("single_book", kwargs={"pk": google_book_id})
             )
+
+
+class LoanRequests(LoginRequiredMixin, ListView):
+    model = RequestBook
+    template_name = "loan_requests.html"
+    context_object_name = "loan_requests"
+    # paginate_by = 20
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Get the current logged-in user
+        user = self.request.user
+
+        # Filter RequestBook objects where the current user is the requester
+        user_owner_requests = RequestBook.objects.filter(
+            owner=user, decision_datetime__isnull=True
+        ).order_by("-request_datetime")
+        user_owner_requests_complete = RequestBook.objects.filter(
+            owner=user, decision_datetime__isnull=False
+        ).order_by("-request_datetime")
+
+        context["user_owner_requests"] = user_owner_requests
+        context["user_owner_requests_complete"] = user_owner_requests_complete
+        return context

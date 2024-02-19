@@ -350,6 +350,7 @@ class AddToWishListConfirmView(TemplateView):
     template_name = "add_to_wishlist_confirm.html"
 
 
+# TODO: If a user has requested the book before, the request button doesnt disable in the single_book page when pressed
 class RequestRaisedView(LoginRequiredMixin, UpdateView):
     def post(self, request, *args, **kwargs):
         requester_id = request.POST.get("requester")
@@ -366,11 +367,11 @@ class RequestRaisedView(LoginRequiredMixin, UpdateView):
             )
 
 
-class LoanRequests(LoginRequiredMixin, ListView):
+class RequestsToUserAll(LoginRequiredMixin, ListView):
     model = RequestBook
-    template_name = "loan_requests.html"
-    context_object_name = "loan_requests"
-    # paginate_by = 1
+    template_name = "requests_to_user_all.html"
+    context_object_name = "requests_to_user_all"
+    # paginate_by = 2
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -378,16 +379,21 @@ class LoanRequests(LoginRequiredMixin, ListView):
         user = self.request.user
 
         # Filter RequestBook objects where the current user is the requester
-        user_owner_requests = RequestBook.objects.filter(
+        requests_to_user_all = RequestBook.objects.filter(
             owner=user, decision_datetime__isnull=True
         ).order_by("-request_datetime")
-        user_owner_requests_complete = RequestBook.objects.filter(
+        requests_to_user_all_complete = RequestBook.objects.filter(
             owner=user, decision_datetime__isnull=False
         ).order_by("-request_datetime")
 
-        context["user_owner_requests"] = user_owner_requests
-        context["user_owner_requests_complete"] = user_owner_requests_complete
+        context["requests_to_user_all"] = requests_to_user_all
+        context["requests_to_user_all_complete"] = requests_to_user_all_complete
         return context
+
+
+class RequestsToUserSingle(LoginRequiredMixin, DetailView):
+    model = RequestBook
+    template_name = "requests_to_user_single.html"
 
 
 # TODO: combine these into one view
@@ -405,7 +411,7 @@ class RequestApproveView(LoginRequiredMixin, UpdateView):
             request_book.decision = True
             request_book.decision_datetime = timezone.now()
             request_book.save()
-            return HttpResponseRedirect(reverse("loan_requests"))
+            return HttpResponseRedirect(reverse("requests_to_user_all"))
 
 
 class RequestRejectView(LoginRequiredMixin, UpdateView):
@@ -413,6 +419,7 @@ class RequestRejectView(LoginRequiredMixin, UpdateView):
         requester_id = request.POST.get("requester")
         owner_id = request.POST.get("owner")
         google_book_id = request.POST.get("google_book_id")
+        reject_reason = request.POST.get("reject_reason")
         if requester_id and owner_id and google_book_id:
             request_book = RequestBook.objects.get(
                 requester=CustomUser.objects.get(pk=requester_id),
@@ -421,5 +428,6 @@ class RequestRejectView(LoginRequiredMixin, UpdateView):
             )
             request_book.decision = False
             request_book.decision_datetime = timezone.now()
+            request_book.reject_reason = reject_reason
             request_book.save()
-            return HttpResponseRedirect(reverse("loan_requests"))
+            return HttpResponseRedirect(reverse("requests_to_user_all"))

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block body_block %}
+
+    <div class="container my-5">
+        <div class="p-3 text-center bg-body-tertiary rounded-3">
+            <h1 class="text-body-emphasis">Book Request</h1>
+            <p class="lead">{{ object.book.title }} </p>
+        </div>
+        <a href="{% url 'requests_to_user_all'%}"> <i> <- return to all requests </i></a>
+        <br>
+    </div>
+    <p>{{object}}</p>
+    {% if object.book.thumbnail %}
+        <a href="{% url 'single_book' pk=object.book.pk %}"><img src="{{ MEDIA_URL }}{{ object.book.thumbnail }}" alt="{{ object.book.title }}"></a>
+    {% else %}
+        <p>No thumbnail available</p>
+    {% endif %}
+    <br><br>
+    <form id="submitForm" method="post" action="">
+        {% csrf_token %}
+        <input type="hidden" name="owner" id="ownerInput" value="{{ object.owner.pk }}">
+        <input type="hidden" name="requester" id="requesterInput" value="{{ object.requester.pk }}">
+        <input type="hidden" name="google_book_id" id="googleBookIdInput" value="{{ object.book.google_book_id }}">
+        <input type="hidden" name="reject_reason" id="rejectReasonInput">
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="flexRadioDefault" id="flexRadioApprove" checked>
+            <label class="form-check-label" for="flexRadioApprove">
+                Approve
+            </label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="flexRadioDefault" id="flexRadioReject">
+            <label class="form-check-label" for="flexRadioDefault2">
+                Reject
+            </label>
+        </div>
+        <br>
+
+        <div id="rejectReasonDropdown" style="display: none;">
+            <label for="rejectReasonNAME" class="form-label mb-0"><i>Select rejection reason:</i></label>
+            <select class="form-select mt-3" id="rejectReason" name="rejectReason">
+                {% for choice in object.REJECT_REASON_CHOICES %}
+                    <option value="{{ choice.0 }}">{{ choice.1 }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <script>
+            document.querySelectorAll('input[name="flexRadioDefault"]').forEach(function(radio) {
+                radio.addEventListener("change", function() {
+                    if (this.id === "flexRadioReject" && this.checked) {
+                        document.getElementById("rejectReasonDropdown").style.display = "block";
+                        document.getElementById("submitForm").action = "{% url 'request_reject' %}";
+                        // Update rejectReasonInput value when reject button is pressed
+                        var selectedRejectReason = document.getElementById("rejectReason").value;
+                        document.getElementById("rejectReasonInput").value = selectedRejectReason;
+                    } else {
+                        document.getElementById("rejectReasonDropdown").style.display = "none";
+                        document.getElementById("submitForm").action = "{% url 'request_approve' %}";
+                        // Reset rejectReasonInput value when approve button is pressed
+                        document.getElementById("rejectReasonInput").value = "";
+                    }
+                });
+            });
+            // Add event listener for dropdown change event
+            document.getElementById("rejectReason").addEventListener("change", function() {
+                // Update rejectReasonInput value when dropdown selection changes
+                var selectedRejectReason = this.value;
+                document.getElementById("rejectReasonInput").value = selectedRejectReason;
+            });
+        </script>
+        <br>
+        <p></p>
+        <button type="submit" class="btn btn-sm btn-primary">Submit</button>
+    </form>
+{% endblock %}

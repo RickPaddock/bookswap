@@ -29,7 +29,6 @@
                             <a href="{% url 'user_account' pk=owner.user.pk %}">{{ owner.user.username }}</a>
                             <!-- Only possible to request book if the logged in user does not already own it -->
                             {% if user.is_authenticated and not is_owner %}
-                                <p>{{book}}</p>
                                 <form method="post" action="{% url 'request_raised' %}">
                                     {% csrf_token %}
                                     <input type="hidden" name="owner" value="{{ owner.user.pk }}">

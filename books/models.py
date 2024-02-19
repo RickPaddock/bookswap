@@ -213,6 +213,17 @@ class RequestBook(models.Model):
     decision = models.BooleanField(null=True, blank=True)
     decision_datetime = models.DateTimeField(null=True, blank=True)
 
+    REJECT_REASON_CHOICES = [
+        ("Book no longer owned", "Book no longer owned"),
+        ("Book already loaned", "Book already loaned"),
+        ("I am currently unavailable", "I am currently unavailable"),
+        ("Other", "Other"),
+    ]
+
+    reject_reason = models.CharField(
+        max_length=26, choices=REJECT_REASON_CHOICES, null=True, blank=True
+    )
+
     def __str__(self):
         return f"{self.requester} requested {self.book} from {self.owner}"
 

@@ -17,6 +17,7 @@ from django.http import HttpResponseRedirect
 import requests
 from requests.exceptions import RequestException
 from json.decoder import JSONDecodeError
+from django.utils import timezone
 from .models import (
     Book,
     CustomUser,
@@ -84,7 +85,7 @@ class LeaveGroup(LoginRequiredMixin, RedirectView):
         return super().get(request, *args, **kwargs)
 
 
-# Testing a list of a model: Return books with owners
+# TODO: Turn these into ListView. Paigination
 def book_database(request):
     books_list = Book.objects.filter(owner__isnull=False).order_by("title").distinct()
     books_dict = {"books": books_list}
@@ -369,7 +370,7 @@ class LoanRequests(LoginRequiredMixin, ListView):
     model = RequestBook
     template_name = "loan_requests.html"
     context_object_name = "loan_requests"
-    # paginate_by = 20
+    # paginate_by = 1
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -387,3 +388,38 @@ class LoanRequests(LoginRequiredMixin, ListView):
         context["user_owner_requests"] = user_owner_requests
         context["user_owner_requests_complete"] = user_owner_requests_complete
         return context
+
+
+# TODO: combine these into one view
+class RequestApproveView(LoginRequiredMixin, UpdateView):
+    def post(self, request, *args, **kwargs):
+        requester_id = request.POST.get("requester")
+        owner_id = request.POST.get("owner")
+        google_book_id = request.POST.get("google_book_id")
+        if requester_id and owner_id and google_book_id:
+            request_book = RequestBook.objects.get(
+                requester=CustomUser.objects.get(pk=requester_id),
+                owner=CustomUser.objects.get(pk=owner_id),
+                book=Book.objects.get(pk=google_book_id),
+            )
+            request_book.decision = True
+            request_book.decision_datetime = timezone.now()
+            request_book.save()
+            return HttpResponseRedirect(reverse("loan_requests"))
+
+
+class RequestRejectView(LoginRequiredMixin, UpdateView):
+    def post(self, request, *args, **kwargs):
+        requester_id = request.POST.get("requester")
+        owner_id = request.POST.get("owner")
+        google_book_id = request.POST.get("google_book_id")
+        if requester_id and owner_id and google_book_id:
+            request_book = RequestBook.objects.get(
+                requester=CustomUser.objects.get(pk=requester_id),
+                owner=CustomUser.objects.get(pk=owner_id),
+                book=Book.objects.get(pk=google_book_id),
+            )
+            request_book.decision = False
+            request_book.decision_datetime = timezone.now()
+            request_book.save()
+            return HttpResponseRedirect(reverse("loan_requests"))

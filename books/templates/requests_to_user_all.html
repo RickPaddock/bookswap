@@ -30,40 +30,61 @@
                 <th>Book</th>
                 <th>Requester</th>
                 <th>Request Datetime</th>
-                <th>Decision</th>
+                <th>Request Details</th>
             </tr>
         </thead>
         <tbody>
-            {% for request_book in requests_to_user_all %}
+            {% for request_book in requests_to_user_open %}
                 <tr>
                     <td><a style="text-decoration:none; color:inherit;" href="{% url 'single_book' pk=request_book.book.pk %}">{{ request_book.book }}</a></td>
                     <td><a style="text-decoration:none; color:inherit;" href="{% url 'user_account' pk=request_book.requester.pk %}">{{ request_book.requester }}</a></td>
                     <td>{{ request_book.request_datetime }}</td>
-                    <td>{{ request_book.decision }}</td>
                     <td><a href="{% url 'requests_to_user_single' pk=request_book.pk %}">View</a></td>
                 </tr>
             {% endfor %}
         </tbody>
     </table>
     <br><br>
-    <h1>Closed Requests</h1>
+    <h1>Accepted Requests</h1>
     <table>
         <thead>
             <tr>
                 <th>Book</th>
                 <th>Requester</th>
                 <th>Request Datetime</th>
-                <th>Decision</th>
-                <th>Rejection Reason</th>
+                <th>Decision Date</th>
             </tr>
         </thead>
         <tbody>
-            {% for request_book in requests_to_user_all_complete %}
+            {% for request_book in requests_to_user_accept %}
                 <tr>
                     <td><a style="text-decoration:none; color:inherit;" href="{% url 'single_book' pk=request_book.book.pk %}">{{ request_book.book }}</a></td>
                     <td><a style="text-decoration:none; color:inherit;" href="{% url 'user_account' pk=request_book.requester.pk %}">{{ request_book.requester }}</a></td>
                     <td>{{ request_book.request_datetime }}</td>
-                    <td>{{ request_book.decision }}</td>
+                    <td>{{ request_book.decision_datetime }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <br><br>
+    <h1>Rejected Requests</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Book</th>
+                <th>Requester</th>
+                <th>Request Date</th>
+                <th>Decision Date</th>
+                <th>Rejection Reason</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for request_book in requests_to_user_reject %}
+                <tr>
+                    <td><a style="text-decoration:none; color:inherit;" href="{% url 'single_book' pk=request_book.book.pk %}">{{ request_book.book }}</a></td>
+                    <td><a style="text-decoration:none; color:inherit;" href="{% url 'user_account' pk=request_book.requester.pk %}">{{ request_book.requester }}</a></td>
+                    <td>{{ request_book.request_datetime }}</td>
+                    <td>{{ request_book.decision_datetime }}</td>
                     <td>{{ request_book.reject_reason}}</td>
                 </tr>
             {% endfor %}

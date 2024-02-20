@@ -379,15 +379,19 @@ class RequestsToUserAll(LoginRequiredMixin, ListView):
         user = self.request.user
 
         # Filter RequestBook objects where the current user is the requester
-        requests_to_user_all = RequestBook.objects.filter(
+        requests_to_user_open = RequestBook.objects.filter(
             owner=user, decision_datetime__isnull=True
         ).order_by("-request_datetime")
-        requests_to_user_all_complete = RequestBook.objects.filter(
-            owner=user, decision_datetime__isnull=False
+        requests_to_user_accept = RequestBook.objects.filter(
+            owner=user, decision_datetime__isnull=False, decision=True
+        ).order_by("-request_datetime")
+        requests_to_user_reject = RequestBook.objects.filter(
+            owner=user, decision_datetime__isnull=False, decision=False
         ).order_by("-request_datetime")
 
-        context["requests_to_user_all"] = requests_to_user_all
-        context["requests_to_user_all_complete"] = requests_to_user_all_complete
+        context["requests_to_user_open"] = requests_to_user_open
+        context["requests_to_user_accept"] = requests_to_user_accept
+        context["requests_to_user_reject"] = requests_to_user_reject
         return context
 
 

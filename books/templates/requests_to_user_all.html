@@ -3,8 +3,8 @@
 
     <div class="container my-5">
         <div class="p-3 text-center bg-body-tertiary rounded-3">
-            <h1 class="text-body-emphasis">Books</h1>
-            <p class="lead">List of requests</p>
+            <h1 class="text-body-emphasis">Requests</h1>
+            <p class="lead">Requests for your books</p>
         </div>
     </div>
 
@@ -22,30 +22,34 @@
             background-color: #f2f2f2;
         }
     </style>
-    <h1>Live Requests</h1>
-    <p><i>These requests require a reply</i></p>
-    <table>
-        <thead>
-            <tr>
-                <th>Book</th>
-                <th>Requester</th>
-                <th>Request Datetime</th>
-                <th>Request Details</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for request_book in requests_to_user_open %}
+    {% if requests_to_user_open.count > 0 %}
+        <h1>Live Requests ({{requests_to_user_open.count}})</h1>
+        <p><i>These requests require a reply</i></p>
+        <table>
+            <thead>
                 <tr>
-                    <td><a style="text-decoration:none; color:inherit;" href="{% url 'single_book' pk=request_book.book.pk %}">{{ request_book.book }}</a></td>
-                    <td><a style="text-decoration:none; color:inherit;" href="{% url 'user_account' pk=request_book.requester.pk %}">{{ request_book.requester }}</a></td>
-                    <td>{{ request_book.request_datetime }}</td>
-                    <td><a href="{% url 'requests_to_user_single' pk=request_book.pk %}">View</a></td>
+                    <th>Book</th>
+                    <th>Requester</th>
+                    <th>Request Datetime</th>
+                    <th>Request Details</th>
                 </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                {% for request_book in requests_to_user_open %}
+                    <tr>
+                        <td><a style="text-decoration:none; color:inherit;" href="{% url 'single_book' pk=request_book.book.pk %}">{{ request_book.book }}</a></td>
+                        <td><a style="text-decoration:none; color:inherit;" href="{% url 'user_account' pk=request_book.requester.pk %}">{{ request_book.requester }}</a></td>
+                        <td>{{ request_book.request_datetime }}</td>
+                        <td><a href="{% url 'requests_to_user_single' pk=request_book.pk %}">View</a></td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>You have no open requests to action</p>
+    {% endif %}
     <br><br>
-    <h1>Accepted Requests</h1>
+    <h1>Accepted Requests ({{requests_to_user_accept.count}})</h1>
     <table>
         <thead>
             <tr>
@@ -67,7 +71,7 @@
         </tbody>
     </table>
     <br><br>
-    <h1>Rejected Requests</h1>
+    <h1>Rejected Requests ({{requests_to_user_reject.count}})</h1>
     <table>
         <thead>
             <tr>

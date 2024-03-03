@@ -6,11 +6,13 @@
             <h1 class="text-body-emphasis">{{group.group_name}}</h1>
             <h3>{{group.description}}</h3>
             {% if user.is_authenticated %}
-                {% if user in group.members.all %} <!-- if logged in user already exists in model class group -->
-                    <a href = "{%url 'leave_group' slug=group.slug %}" class='btn btn-lg btn-fill btn-warning'><span class='glyphicon glyphicon-remove-circle'></span> Leave</a>
-                {% else %}
-                    <a href = "{%url 'join_group' slug=group.slug %}" class='btn btn-lg btn-fill btn-warning'><span class='glyphicon glyphicon-ok-circle'></span> Join</a>
-                {% endif %}
+                <div class="d-flex justify-content-end">
+                    {% if user in group.members.all %} <!-- if logged in user already exists in model class group -->
+                        <a href = "{%url 'leave_group' slug=group.slug %}" class='btn btn-lg btn-fill btn-warning'><span class='glyphicon glyphicon-remove-circle'></span> Leave</a>
+                    {% else %}
+                        <a href = "{%url 'join_group' slug=group.slug %}" class='btn btn-lg btn-fill btn-warning'><span class='glyphicon glyphicon-ok-circle'></span> Join</a>
+                    {% endif %}
+                </div>
             {% endif %}
         </div>
         <br>

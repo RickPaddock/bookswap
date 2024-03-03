@@ -18,6 +18,8 @@ import requests
 from requests.exceptions import RequestException
 from json.decoder import JSONDecodeError
 from django.utils import timezone
+from datetime import timedelta
+from django.utils.dateparse import parse_datetime
 from .models import (
     Book,
     CustomUser,
@@ -350,14 +352,13 @@ class AddToWishListConfirmView(TemplateView):
     template_name = "add_to_wishlist_confirm.html"
 
 
-# TODO: If a user has requested the book before, the request button doesnt disable in the single_book page when pressed
 class RequestRaisedView(LoginRequiredMixin, UpdateView):
     def post(self, request, *args, **kwargs):
         requester_id = request.POST.get("requester")
         owner_id = request.POST.get("owner")
         google_book_id = request.POST.get("google_book_id")
         if requester_id and owner_id and google_book_id:
-            RequestBook.objects.get_or_create(
+            RequestBook.objects.create(
                 requester=CustomUser.objects.get(pk=requester_id),
                 owner=CustomUser.objects.get(pk=owner_id),
                 book=Book.objects.get(pk=google_book_id),
@@ -400,38 +401,28 @@ class RequestsToUserSingle(LoginRequiredMixin, DetailView):
     template_name = "requests_to_user_single.html"
 
 
-# TODO: combine these into one view
-class RequestApproveView(LoginRequiredMixin, UpdateView):
+class RequestDecisionView(LoginRequiredMixin, UpdateView):
     def post(self, request, *args, **kwargs):
+        time_window = timedelta(seconds=1)  # Calculate a small time window for matching
+        decisionInput = request.POST.get("decision")
         requester_id = request.POST.get("requester")
         owner_id = request.POST.get("owner")
         google_book_id = request.POST.get("google_book_id")
-        if requester_id and owner_id and google_book_id:
+        reject_reason = request.POST.get("reject_reason")  # Will be blank for approve
+        request_datetime = parse_datetime(request.POST.get("request_datetime"))
+        if decisionInput and requester_id and owner_id and google_book_id:
             request_book = RequestBook.objects.get(
                 requester=CustomUser.objects.get(pk=requester_id),
                 owner=CustomUser.objects.get(pk=owner_id),
                 book=Book.objects.get(pk=google_book_id),
+                request_datetime__gte=request_datetime - time_window,
+                request_datetime__lte=request_datetime + time_window,
             )
-            request_book.decision = True
-            request_book.decision_datetime = timezone.now()
-            request_book.save()
-            return HttpResponseRedirect(reverse("requests_to_user_all"))
-
-
-class RequestRejectView(LoginRequiredMixin, UpdateView):
-    def post(self, request, *args, **kwargs):
-        requester_id = request.POST.get("requester")
-        owner_id = request.POST.get("owner")
-        google_book_id = request.POST.get("google_book_id")
-        reject_reason = request.POST.get("reject_reason")
-        if requester_id and owner_id and google_book_id:
-            request_book = RequestBook.objects.get(
-                requester=CustomUser.objects.get(pk=requester_id),
-                owner=CustomUser.objects.get(pk=owner_id),
-                book=Book.objects.get(pk=google_book_id),
-            )
-            request_book.decision = False
-            request_book.decision_datetime = timezone.now()
+            if decisionInput == "Approve":
+                request_book.decision = True
+            elif decisionInput == "Reject":
+                request_book.decision = False
             request_book.reject_reason = reject_reason
+            request_book.decision_datetime = timezone.now()
             request_book.save()
             return HttpResponseRedirect(reverse("requests_to_user_all"))

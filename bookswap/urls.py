@@ -37,8 +37,7 @@ from books.views import (
     AddToLibraryConfirmView,
     AddToWishListConfirmView,
     RequestRaisedView,
-    RequestApproveView,
-    RequestRejectView,
+    RequestDecisionView,
 )
 
 # Django provides login and logout views so we dont create them in views.py
@@ -91,14 +90,9 @@ urlpatterns = [
         name="request_raised",
     ),
     path(
-        "request_approve/",
-        RequestApproveView.as_view(),
-        name="request_approve",
-    ),
-    path(
-        "request_reject/",
-        RequestRejectView.as_view(),
-        name="request_reject",
+        "request_decision/",
+        RequestDecisionView.as_view(),
+        name="request_decision",
     ),
 ]
 

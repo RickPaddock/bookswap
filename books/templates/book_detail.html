@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block body_block %}
+{% load static %}
 
     <div class="container my-5">
         <div class="p-3 text-center bg-body-tertiary rounded-3">
@@ -13,7 +14,7 @@
                         <img src="{{ MEDIA_URL }}{{ book.thumbnail }}" alt="{{ book.title }}">
                     {% else %}
                         <!-- Placeholder image or alternative content if thumbnail is not available -->
-                        <p>No thumbnail available</p>
+                        <img src="{% static 'generic_thumbnail.jpeg' %}" alt='No Thumbnail found'>
                     {% endif %}
                     <li>Authors: {{book.authors}}</li>
                     <li>Page Count: {{book.pagecount}}</li>

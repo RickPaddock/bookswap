@@ -13,7 +13,13 @@
                     <!-- md-2 = large screen, sm-4 = medium, xs-6 = small. img-fluid below ensures fluidity -->
                     <div class="col-md-2 col-sm-4 col-xs-6">
                         <!-- <a href="{% url 'single_book' pk=book.pk %}">{{book.title}}</a> -->
-                        <a href="{% url 'single_book' pk=book.pk %}"><img src="{{ book.thumbnail }}" class="img-fluid" alt="{{ book.title }}"></a>
+                        {% if book.thumbnail %}
+                            <a href="{% url 'single_book' pk=book.pk %}"><img src="{{ book.thumbnail }}" class="img-fluid" alt="{{ book.title }}"></a>
+                        {% else %}
+                            <!-- Placeholder image or alternative content if thumbnail is not available -->
+                            <a href="{% url 'single_book' pk=book.pk %}">{{ book.title }}</a>
+                            <p><i>No thumbnail available</i></p>
+                        {% endif %}
                         Copies: <span class="badge">{{book.owner.count}}</span>
                         <!-- Authors: {{book.authors}}<br> -->
                     </div>

@@ -8,9 +8,9 @@
             {% if user.is_authenticated %}
                 <div class="d-flex justify-content-end">
                     {% if user in group.members.all %} <!-- if logged in user already exists in model class group -->
-                        <a href = "{%url 'leave_group' slug=group.slug %}" class='btn btn-lg btn-fill btn-warning'><span class='glyphicon glyphicon-remove-circle'></span> Leave</a>
+                        <a href = "{%url 'leave_group' slug=group.slug %}" class='btn btn-lg btn-fill btn-warning button-leave'> Joined</a>
                     {% else %}
-                        <a href = "{%url 'join_group' slug=group.slug %}" class='btn btn-lg btn-fill btn-warning'><span class='glyphicon glyphicon-ok-circle'></span> Join</a>
+                        <a href = "{%url 'join_group' slug=group.slug %}" class='btn btn-lg btn-fill btn-primary'> Join</a>
                     {% endif %}
                 </div>
             {% endif %}
@@ -34,5 +34,18 @@
             </div>
         </div>
     </div>
+    <script>
+        var btn = document.querySelector(".button-leave");
+        var current_colour = btn.style.background;
+        console.log(current_colour)
+        btn.addEventListener("mouseover", function() {
+            this.textContent = "Leave";
+            this.style.background = "rgba(255,0,0,0.6)";
+        })
+        btn.addEventListener("mouseout", function() {
+            this.textContent = "Joined";
+            this.style.background = current_colour;
+        })
+    </script>
 
 {% endblock %}

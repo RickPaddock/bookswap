@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block body_block %}
+{% load static %}
 
     <div class="container my-5">
         <div class="p-3 text-center bg-body-tertiary rounded-3">
@@ -11,7 +12,8 @@
     {% if object.book.thumbnail %}
         <a href="{% url 'single_book' pk=object.book.pk %}"><img src="{{ MEDIA_URL }}{{ object.book.thumbnail }}" alt="{{ object.book.title }}"></a>
     {% else %}
-        <p>No thumbnail available</p>
+        <!-- Placeholder image or alternative content if thumbnail is not available -->
+        <img src="{% static 'generic_thumbnail.jpeg' %}" alt='No Thumbnail found'>
     {% endif %}
     <br><br>
     <form id="submitForm" method="post" action="">

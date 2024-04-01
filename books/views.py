@@ -1,3 +1,4 @@
+from django.conf import settings  # To pull in env variables
 from django.shortcuts import render
 from django.views.generic import (
     CreateView,
@@ -252,15 +253,13 @@ def process_book_item(item):
 
 def book_search(request):
 
-    GOOGLE_BOOKS_API_KEY = "AIzaSyBVAeqv6x8nytkSb_Mn4pXfza3nLUp8a0I"
-
     if request.method == "POST":
         query = request.POST.get("query")
 
         if query:
             try:
                 # Google Books API URL
-                url = f"https://www.googleapis.com/books/v1/volumes?q={query}&key={GOOGLE_BOOKS_API_KEY}"
+                url = f"https://www.googleapis.com/books/v1/volumes?q={query}&key={settings.GOOGLE_BOOKS_API_KEY}"
 
                 # Make a request to the API
                 response = requests.get(url)
@@ -339,9 +338,6 @@ class AddToLibraryWishView(View):
 
             except Exception as e:
                 print("Exception!", str(e))
-                return redirect(
-                    "user_account"
-                )  # Redirect back to user account if book creation fails
 
 
 class AddToLibraryConfirmView(TemplateView):

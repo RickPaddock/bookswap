@@ -13,6 +13,20 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 from pathlib import Path
 import os
 
+# DJANGO_ENV needs to be set on production server
+if os.getenv("DJANGO_ENV") == "production":
+    print("\nRUNNING IN PRODUCTION\n")
+    DEBUG = False
+else:
+    print("\nRUNNING IN DEVELOPMENT\n")
+    from dotenv import load_dotenv
+
+    load_dotenv()
+    DEBUG = True
+
+# LOAD ENVIRONMENT VARIABLES from prod or dev depending on above
+GOOGLE_BOOKS_API_KEY = os.getenv("GOOGLE_BOOKS_API_KEY")
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
@@ -27,8 +41,6 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "django-insecure-k5h52nbo#)vu+v9*#sq3xpmr=1-hk@=jk+pk^3)=p-fv%pzj%_"
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
 ALLOWED_HOSTS = []
 
@@ -88,7 +100,16 @@ DATABASES = {
         "NAME": BASE_DIR / "db.sqlite3",
     }
 }
-
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'postgres',
+#         'USER': 'postgres',
+#         'PASSWORD': 'ccaassss1',
+#         'HOST': 'localhost',
+#         'PORT': '5432',
+#     }
+# }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators

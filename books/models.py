@@ -25,8 +25,8 @@ class Book(models.Model):
     ID_OTHER = models.CharField(max_length=25, null=True, unique=True)
     title = models.CharField(max_length=100, blank=False)
     authors = models.CharField(max_length=100, blank=True)
-    thumbnail = models.ImageField(upload_to="images", null=True, blank=True)
-    description = models.CharField(max_length=500, blank=True)
+    thumbnail = models.CharField(max_length=600, null=True, blank=True)
+    description = models.TextField(blank=True)
     pagecount = models.CharField(max_length=7, null=True, blank=True)
     owner = models.ManyToManyField(CustomUser, through="UserBook")
 

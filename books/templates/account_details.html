@@ -11,11 +11,11 @@
         {% if user.is_authenticated and user.username == user_username.username %}
             <div class="row">
                 <div class="col">
-                    <!-- <a href="{% url 'requests_to_user_all'%}">Your book requests ({{user_requests_open_count}})</a> -->
-                    <p>Your book requests ({{user_requests_open_count}})</p>
+                    <a href="{% url 'requests_to_user_all' %}?filter_by=requester">Your book requests ({{user_requests_open_count}})</a>
+                    <!-- <p>Your book requests ({{user_requests_open_count}})</p> -->
                 </div>
                 <div class="col">
-                    <a href="{% url 'requests_to_user_all'%}">Requested from you ({{user_requests_recieved_open_count}})</a>
+                    <a href="{% url 'requests_to_user_all' %}?filter_by=owner">Requested from you ({{user_requests_recieved_open_count}})</a>
                 </div>
             </div>
             <hr>

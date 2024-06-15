@@ -4,7 +4,13 @@
     <div class="container my-5">
         <div class="p-3 text-center bg-body-tertiary rounded-3">
             <h1 class="text-body-emphasis">Requests</h1>
-            <p class="lead">Requests for your books</p>
+            <p class="lead">
+                {% if filter_by == 'requester' %}
+                    Your requests for other people's books
+                {% else %}
+                    Requests for your books
+                {% endif %}
+            </p>
         </div>
     </div>
 
@@ -24,23 +30,41 @@
     </style>
     {% if requests_to_user_open.count > 0 %}
         <h1>Live Requests ({{requests_to_user_open.count}})</h1>
-        <p><i>These requests require a reply</i></p>
+        <p><i>
+            {% if filter_by == 'requester' %}
+                Your requests which are waiting for a reply from the owner. Please wait for a response
+            {% else %}
+                These requests require a reply from you!
+            {% endif %}
+        </i></p>
         <table>
             <thead>
                 <tr>
                     <th>Book</th>
-                    <th>Requester</th>
+                    {% if filter_by == 'owner' %}
+                        <th>Requester</th>
+                    {% else %}
+                        <th>Owner</th>
+                    {% endif %}
                     <th>Request Datetime</th>
-                    <th>Request Details</th>
+                    {% if filter_by == 'owner' %}
+                        <th>Request Details</th>
+                    {% endif %}
                 </tr>
             </thead>
             <tbody>
                 {% for request_book in requests_to_user_open %}
                     <tr>
                         <td><a style="text-decoration:none; color:inherit;" href="{% url 'single_book' pk=request_book.book.pk %}">{{ request_book.book }}</a></td>
-                        <td><a style="text-decoration:none; color:inherit;" href="{% url 'user_account' pk=request_book.requester.pk %}">{{ request_book.requester }}</a></td>
+                        {% if filter_by == 'owner' %}
+                            <td><a style="text-decoration:none; color:inherit;" href="{% url 'user_account' pk=request_book.requester.pk %}">{{ request_book.requester }}</a></td>
+                        {% else %}
+                            <td><a style="text-decoration:none; color:inherit;" href="{% url 'user_account' pk=request_book.owner.pk %}">{{ request_book.owner }}</a></td>
+                        {% endif %}
                         <td>{{ request_book.request_datetime }}</td>
-                        <td><a href="{% url 'requests_to_user_single' pk=request_book.pk %}">View</a></td>
+                        {% if filter_by == 'owner' %}
+                            <td><a href="{% url 'requests_to_user_single' pk=request_book.pk %}">View</a></td>
+                        {% endif %}
                     </tr>
                 {% endfor %}
             </tbody>

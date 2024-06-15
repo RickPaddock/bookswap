@@ -75,6 +75,6 @@
         <br>
         <p></p>
         <button type="submit" class="btn btn-sm btn-primary">Submit</button>
-        <a href="{% url 'requests_to_user_all'%}" class="btn btn-sm btn-default">Cancel</a>
+        <a href="{% url 'requests_to_user_all' %}?filter_by=owner" class="btn btn-sm btn-default">Cancel</a>
     </form>
 {% endblock %}

@@ -1,5 +1,6 @@
 from django.conf import settings  # To pull in env variables
 from django.shortcuts import render
+from django.http import Http404
 from django.views.generic import (
     CreateView,
     TemplateView,
@@ -375,7 +376,25 @@ class RequestsToUserAll(LoginRequiredMixin, ListView):
         # Get the current logged-in user
         user = self.request.user
 
-        # Filter RequestBook objects where the current user is the requester
+        # Get the filter parameter from the URL
+        filter_by = self.request.GET.get("filter_by")
+
+        # Pass value to context to HTML page can use it for dynamic changes to common page
+        context["filter_by"] = filter_by
+
+        if filter_by == "owner":
+            print("OWNER:", filter_by)
+            context = self.get_requests_by_owner(user, context)
+        elif filter_by == "requester":
+            print("REQUESTER:", filter_by)
+            context = self.get_requests_by_requester(user, context)
+        else:
+            raise Http404("Filter parameter is not valid.")
+
+        return context
+
+    def get_requests_by_owner(self, user, context):
+        """Books requested FROM the user. User IS the owner of the book and is giving them away"""
         requests_to_user_open = RequestBook.objects.filter(
             owner=user, decision_datetime__isnull=True
         ).order_by("-request_datetime")
@@ -384,6 +403,23 @@ class RequestsToUserAll(LoginRequiredMixin, ListView):
         ).order_by("-request_datetime")
         requests_to_user_reject = RequestBook.objects.filter(
             owner=user, decision_datetime__isnull=False, decision=False
+        ).order_by("-request_datetime")
+
+        context["requests_to_user_open"] = requests_to_user_open
+        context["requests_to_user_accept"] = requests_to_user_accept
+        context["requests_to_user_reject"] = requests_to_user_reject
+        return context
+
+    def get_requests_by_requester(self, user, context):
+        """Books requested BY the user. User is not the owner of the book and wants to borrow it"""
+        requests_to_user_open = RequestBook.objects.filter(
+            requester=user, decision_datetime__isnull=True
+        ).order_by("-request_datetime")
+        requests_to_user_accept = RequestBook.objects.filter(
+            requester=user, decision_datetime__isnull=False, decision=True
+        ).order_by("-request_datetime")
+        requests_to_user_reject = RequestBook.objects.filter(
+            requester=user, decision_datetime__isnull=False, decision=False
         ).order_by("-request_datetime")
 
         context["requests_to_user_open"] = requests_to_user_open
@@ -421,4 +457,6 @@ class RequestDecisionView(LoginRequiredMixin, UpdateView):
             request_book.reject_reason = reject_reason
             request_book.decision_datetime = timezone.now()
             request_book.save()
-            return HttpResponseRedirect(reverse("requests_to_user_all"))
+            return HttpResponseRedirect(
+                reverse("requests_to_user_all") + "?filter_by=owner"
+            )

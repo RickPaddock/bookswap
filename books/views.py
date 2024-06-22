@@ -1,6 +1,7 @@
 from django.conf import settings  # To pull in env variables
 from django.shortcuts import render
 from django.http import Http404
+from django.db.models import Count
 from django.views.generic import (
     CreateView,
     TemplateView,
@@ -96,6 +97,27 @@ def book_database(request):
     return render(request, "book_database.html", context=books_dict)
 
 
+def book_database_wishes(request):
+    # Query to count distinct users wishing for each book
+    books_list = (
+        Book.objects.filter(
+            book_wish__user__isnull=False,  # Filter to include only books that are wished for
+            book_wish__removed_datetime__isnull=True,  # Book is still wanted and hasn't been removed
+        )
+        .annotate(
+            wishers_count=Count(
+                "book_wish__user", distinct=True
+            ),  # Count distinct users wishing for the book
+            owners_count=Count(
+                "book_owners__user", distinct=True
+            ),  # Count distinct users owning the book
+        )
+        .order_by("title")
+    )  # Order by book title
+    books_dict = {"books": books_list}
+    return render(request, "book_database_wishlist.html", context=books_dict)
+
+
 def group_database(request):
     groups_list = Group.objects.order_by("group_name")
     groups_dict = {"groups": groups_list}
@@ -115,8 +137,11 @@ class UserAccount(TemplateView):
         user_book_count = UserBook.objects.filter(user=user_pk).count()
 
         # Query the user's book wishes
-        user_wish = Wishlist.objects.filter(user=user_pk)
-        user_wish_count = Wishlist.objects.filter(user=user_pk).count()
+        # TODO: Put this in reusable function with the one in SingleBook
+        user_wish = Wishlist.objects.filter(user=user_pk, removed_datetime__isnull=True)
+        user_wish_count = Wishlist.objects.filter(
+            user=user_pk, removed_datetime__isnull=True
+        ).count()
 
         # Query the number of groups the user belongs to
         user_groups = Group.objects.filter(members=user_pk).order_by("group_name")
@@ -166,8 +191,11 @@ class SingleBook(DetailView):
         owners = book.book_owners.all()
 
         book_pk = self.kwargs["pk"]  # obtain elements from URL
-        user_wish = Wishlist.objects.filter(book=book_pk)
-        user_wish_count = Wishlist.objects.filter(book=book_pk).count()
+        # TODO: Put this in reusable function with the one in UserAccount
+        user_wish = Wishlist.objects.filter(book=book_pk, removed_datetime__isnull=True)
+        user_wish_count = Wishlist.objects.filter(
+            book=book_pk, removed_datetime__isnull=True
+        ).count()
 
         # Only check for certain things if user is logged in
         if self.request.user.is_authenticated:

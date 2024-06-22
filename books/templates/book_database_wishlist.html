@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block body_block %}
+
+<div class="container my-5">
+    <div class="p-3 text-center bg-body-tertiary rounded-3">
+        <h1 class="text-body-emphasis">Wanted Books</h1>
+        <p class="lead">List of books currently on people's wishlists</p>
+    </div>
+    <br>
+    <div class="container">
+        <div class="row">
+            {% for book in books %}
+                <!-- md-2 = large screen, sm-4 = medium, xs-6 = small. img-fluid below ensures fluidity -->
+                <div class="col-md-2 col-sm-4 col-xs-6">
+                    {% if book.thumbnail %}
+                        <a href="{% url 'single_book' pk=book.pk %}">
+                            <img src="{{ book.thumbnail }}" class="img-fluid" alt="{{ book.title }}">
+                        </a>
+                    {% else %}
+                        <!-- Placeholder image or alternative content if thumbnail is not available -->
+                        <a href="{% url 'single_book' pk=book.pk %}">{{ book.title }}</a>
+                        <p><i>No thumbnail available</i></p>
+                    {% endif %}
+                    <p>Wanted: <span class="badge">{{ book.wishers_count }}</span></p>
+                    <p>Available: <span class="badge">{{ book.owners_count }}</span></p>
+                </div>
+                {% if forloop.counter|divisibleby:6 %}
+                    </div><div class="row"> <!-- Make new row every 6 thumbnails (for large screen)-->
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}

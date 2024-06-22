@@ -1,7 +1,7 @@
 from django.conf import settings  # To pull in env variables
 from django.shortcuts import render
 from django.http import Http404
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.views.generic import (
     CreateView,
     TemplateView,
@@ -138,7 +138,11 @@ class UserAccount(TemplateView):
 
         # Query the user's book wishes
         # TODO: Put this in reusable function with the one in SingleBook
-        user_wish = Wishlist.objects.filter(user=user_pk, removed_datetime__isnull=True)
+        user_wish = Wishlist.objects.filter(
+            user=user_pk, removed_datetime__isnull=True
+        ).annotate(owners_count=Count("book__owner", filter=~Q(book__owner=user_pk)))
+
+        # user_wish = Wishlist.objects.filter(user=user_pk, removed_datetime__isnull=True)
         user_wish_count = Wishlist.objects.filter(
             user=user_pk, removed_datetime__isnull=True
         ).count()

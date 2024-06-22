@@ -33,7 +33,13 @@
                 <p>You want {{ user_wish_count }} book{{ user_wish_count|pluralize }}:</p>
                 <ol>
                     {% for wish in user_wish %}
-                        <li><a href="{% url 'single_book' pk=wish.book.pk %}">{{ wish.book.title }}</a></li>
+                        <li>
+                            <a href="{% url 'single_book' pk=wish.book.pk %}">{{ wish.book.title }}</a>
+                            <!-- For wished books, show number of available copies -->
+                            {% if user.is_authenticated and wish.owners_count > 0 %}
+                                ({{ wish.owners_count }} available)
+                            {% endif %}
+                        </li>
                     {% endfor %}
                 </ol>
             </div>

@@ -346,18 +346,23 @@ class AddToLibraryWishView(View):
         ID_OTHER = request.POST.get("ID_OTHER")
 
         if id_google and title:
+            print("Adding or retrieving existing book...")
             try:
                 book, created = Book.objects.get_or_create(
                     google_book_id=id_google,
-                    title=title,
-                    authors=authors,
-                    thumbnail=thumbnail,
-                    description=description,
-                    pagecount=pageCount,
-                    ID_ISBN_13=ID_ISBN_13,
-                    ID_ISBN_10=ID_ISBN_10,
-                    ID_OTHER=ID_OTHER,
+                    defaults={
+                        "title": title,
+                        "authors": authors,
+                        "thumbnail": thumbnail,
+                        "description": description,
+                        "pagecount": pageCount,
+                        "ID_ISBN_13": ID_ISBN_13,
+                        "ID_ISBN_10": ID_ISBN_10,
+                        "ID_OTHER": ID_OTHER,
+                    },
                 )
+                print(f"Book: {book}")
+                print(f"Created: {created}")
                 if action == "add_to_library":
                     user.book_set.add(book)
                     return redirect(

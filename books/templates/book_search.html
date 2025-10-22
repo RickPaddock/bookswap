@@ -18,7 +18,7 @@
                             <img src="{% static 'generic_thumbnail.jpeg' %}" alt='No Thumbnail found'>
                         {% endif %}
                         {% if book.description != "N/A" %}
-                            <p>{{ book.description|safe }}</p>
+                            <p>{{ book.description }}</p>
                         {% else %}
                             <p><i>No description available</i></p>
                         {% endif %}

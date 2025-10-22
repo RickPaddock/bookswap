@@ -17,12 +17,17 @@ import os
 if os.getenv("DJANGO_ENV") == "production":
     print("\nRUNNING IN PRODUCTION\n")
     DEBUG = False
+    # In production, load ALLOWED_HOSTS from environment variable
+    # Example: ALLOWED_HOSTS=example.com,www.example.com
+    ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
 else:
     print("\nRUNNING IN DEVELOPMENT\n")
     from dotenv import load_dotenv
 
     load_dotenv()
     DEBUG = True
+    # In development, allow localhost
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 # LOAD ENVIRONMENT VARIABLES from prod or dev depending on above
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -40,9 +45,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# SECRET_KEY is now loaded from environment variables above (line 28)
-
-ALLOWED_HOSTS = []
+# SECRET_KEY is now loaded from environment variables above (line 33)
+# ALLOWED_HOSTS is now configured based on environment (lines 22 or 30)
 
 
 # Application definition

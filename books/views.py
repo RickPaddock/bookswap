@@ -19,6 +19,7 @@ from django.contrib import messages
 from django.urls import reverse_lazy, reverse
 from django.shortcuts import get_object_or_404
 from django.db import IntegrityError
+from django.core.exceptions import ValidationError
 from django.http import HttpResponseRedirect
 import requests
 from requests.exceptions import RequestException
@@ -259,20 +260,24 @@ def process_book_item(item):
     pageCount = book_info.get("pageCount", "N/A")
     identifiers = book_info.get("industryIdentifiers", "N/A")
 
-    ID_ISBN_13 = "N/A"
-    ID_ISBN_10 = "N/A"
-    ID_OTHER = "N/A"
+    # Use dictionary to store identifiers - cleaner than multiple variables
+    identifier_map = {
+        "ISBN_13": "N/A",
+        "ISBN_10": "N/A",
+        "OTHER": "N/A",
+    }
 
-    for i in identifiers:
-        try:
-            if i["type"] == "ISBN_13":
-                ID_ISBN_13 = i["identifier"]
-            if i["type"] == "ISBN_10":
-                ID_ISBN_10 = i["identifier"]
-            if i["type"] == "OTHER":
-                ID_OTHER = i["identifier"]
-        except:
-            pass
+    # Only process identifiers if it's a list (not "N/A" string)
+    if isinstance(identifiers, list):
+        for i in identifiers:
+            try:
+                id_type = i.get("type")
+                id_value = i.get("identifier")
+                if id_type in identifier_map and id_value:
+                    identifier_map[id_type] = id_value
+            except (AttributeError, TypeError) as e:
+                logger.warning("Invalid identifier format in book data: %s", e)
+                continue
 
     return {
         "id_google": id_google,
@@ -281,9 +286,9 @@ def process_book_item(item):
         "thumbnail": thumbnail,
         "description": description,
         "pageCount": pageCount,
-        "ID_ISBN_13": ID_ISBN_13,
-        "ID_ISBN_10": ID_ISBN_10,
-        "ID_OTHER": ID_OTHER,
+        "ID_ISBN_13": identifier_map["ISBN_13"],
+        "ID_ISBN_10": identifier_map["ISBN_10"],
+        "ID_OTHER": identifier_map["OTHER"],
     }
 
 
@@ -335,49 +340,71 @@ def book_search(request):
 
 
 class AddToLibraryWishView(View):
+    # Expected POST parameters for cleaner extraction
+    BOOK_PARAMS = [
+        "action", "id_google", "title", "authors", "thumbnail",
+        "description", "pageCount", "ID_ISBN_13", "ID_ISBN_10", "ID_OTHER"
+    ]
+
+    # Action handler registry for clean dispatch pattern
+    def _add_to_library(self, user, book):
+        """Add book to user's library"""
+        user.book_set.add(book)
+
+    def _add_to_wishlist(self, user, book):
+        """Add book to user's wishlist"""
+        Wishlist.objects.get_or_create(user=user, book=book)
+
+    # Map actions to (handler_method, redirect_url)
+    ACTION_HANDLERS = {
+        "add_to_library": (_add_to_library, "add_to_library_confirm"),
+        "add_to_wishlist": (_add_to_wishlist, "add_to_wishlist_confirm"),
+    }
+
     def post(self, request, *args, **kwargs):
         user = request.user
-        action = request.POST.get("action")
-        id_google = request.POST.get("id_google")
-        title = request.POST.get("title")
-        authors = request.POST.get("authors")
-        thumbnail = request.POST.get("thumbnail")
-        description = request.POST.get("description")
-        pageCount = request.POST.get("pageCount")
-        ID_ISBN_13 = request.POST.get("ID_ISBN_13")
-        ID_ISBN_10 = request.POST.get("ID_ISBN_10")
-        ID_OTHER = request.POST.get("ID_OTHER")
 
-        if id_google and title:
-            logger.debug("Adding or retrieving existing book with ID: %s", id_google)
+        # Extract all POST parameters using registry pattern
+        params = {key: request.POST.get(key) for key in self.BOOK_PARAMS}
+
+        if params["id_google"] and params["title"]:
+            logger.debug("Adding or retrieving existing book with ID: %s", params["id_google"])
             try:
                 book, created = Book.objects.get_or_create(
-                    google_book_id=id_google,
+                    google_book_id=params["id_google"],
                     defaults={
-                        "title": title,
-                        "authors": authors,
-                        "thumbnail": thumbnail,
-                        "description": description,
-                        "pagecount": pageCount,
-                        "ID_ISBN_13": ID_ISBN_13,
-                        "ID_ISBN_10": ID_ISBN_10,
-                        "ID_OTHER": ID_OTHER,
+                        "title": params["title"],
+                        "authors": params["authors"],
+                        "thumbnail": params["thumbnail"],
+                        "description": params["description"],
+                        "pagecount": params["pageCount"],
+                        "ID_ISBN_13": params["ID_ISBN_13"],
+                        "ID_ISBN_10": params["ID_ISBN_10"],
+                        "ID_OTHER": params["ID_OTHER"],
                     },
                 )
                 logger.debug("Book: %s, Created: %s", book.title, created)
-                if action == "add_to_library":
-                    user.book_set.add(book)
-                    return redirect(
-                        "add_to_library_confirm"
-                    )  # Redirect to a confirmation page
-                elif action == "add_to_wishlist":
-                    Wishlist.objects.get_or_create(user=user, book=book)
-                    return redirect(
-                        "add_to_wishlist_confirm"
-                    )  # Redirect to a confirmation page
 
-            except Exception as e:
+                # Use action handler registry for clean dispatch
+                handler_info = self.ACTION_HANDLERS.get(params["action"])
+                if handler_info:
+                    handler_method, redirect_url = handler_info
+                    handler_method(self, user, book)
+                    return redirect(redirect_url)
+                else:
+                    logger.warning("Invalid action received: %s", params["action"])
+                    messages.error(request, "Invalid action")
+                    return redirect("book_search")
+
+            except (IntegrityError, ValidationError) as e:
                 logger.error("Error adding book to library/wishlist: %s", str(e), exc_info=True)
+                messages.error(request, f"Unable to add book: {str(e)}")
+                return redirect("book_search")
+            except Exception as e:
+                # Catch any other unexpected errors
+                logger.error("Unexpected error adding book: %s", str(e), exc_info=True)
+                messages.error(request, "An unexpected error occurred. Please try again.")
+                return redirect("book_search")
 
 
 class AddToLibraryConfirmView(TemplateView):
@@ -410,6 +437,21 @@ class RequestsToUserAll(LoginRequiredMixin, ListView):
     context_object_name = "requests_to_user_all"
     # paginate_by = 2
 
+    # Registry pattern for request status filters - eliminates code duplication
+    REQUEST_STATUS_FILTERS = {
+        "open": {"decision_datetime__isnull": True},
+        "accept": {"decision_datetime__isnull": False, "decision": True},
+        "reject": {"decision_datetime__isnull": False, "decision": False},
+    }
+
+    # Filter handler registry for clean dispatch
+    @property
+    def FILTER_HANDLERS(self):
+        return {
+            "owner": self.get_requests_by_owner,
+            "requester": self.get_requests_by_requester,
+        }
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # Get the current logged-in user
@@ -421,49 +463,42 @@ class RequestsToUserAll(LoginRequiredMixin, ListView):
         # Pass value to context to HTML page can use it for dynamic changes to common page
         context["filter_by"] = filter_by
 
-        if filter_by == "owner":
-            logger.debug("Filtering requests by owner: %s", user.username)
-            context = self.get_requests_by_owner(user, context)
-        elif filter_by == "requester":
-            logger.debug("Filtering requests by requester: %s", user.username)
-            context = self.get_requests_by_requester(user, context)
+        # Use filter handler registry for clean dispatch
+        handler = self.FILTER_HANDLERS.get(filter_by)
+        if handler:
+            logger.debug("Filtering requests by %s: %s", filter_by, user.username)
+            context = handler(user, context)
         else:
             raise Http404("Filter parameter is not valid.")
 
         return context
 
+    def _get_requests_by_status(self, user, role_field):
+        """DRY helper to get requests by status (open/accept/reject).
+
+        Args:
+            user: The user to filter by
+            role_field: Either "owner" or "requester"
+
+        Returns:
+            Dict with keys: requests_to_user_open, requests_to_user_accept, requests_to_user_reject
+        """
+        result = {}
+        for status_key, filters in self.REQUEST_STATUS_FILTERS.items():
+            query_filters = {role_field: user, **filters}
+            result[f"requests_to_user_{status_key}"] = RequestBook.objects.filter(
+                **query_filters
+            ).order_by("-request_datetime")
+        return result
+
     def get_requests_by_owner(self, user, context):
         """Books requested FROM the user. User IS the owner of the book and is giving them away"""
-        requests_to_user_open = RequestBook.objects.filter(
-            owner=user, decision_datetime__isnull=True
-        ).order_by("-request_datetime")
-        requests_to_user_accept = RequestBook.objects.filter(
-            owner=user, decision_datetime__isnull=False, decision=True
-        ).order_by("-request_datetime")
-        requests_to_user_reject = RequestBook.objects.filter(
-            owner=user, decision_datetime__isnull=False, decision=False
-        ).order_by("-request_datetime")
-
-        context["requests_to_user_open"] = requests_to_user_open
-        context["requests_to_user_accept"] = requests_to_user_accept
-        context["requests_to_user_reject"] = requests_to_user_reject
+        context.update(self._get_requests_by_status(user, "owner"))
         return context
 
     def get_requests_by_requester(self, user, context):
         """Books requested BY the user. User is not the owner of the book and wants to borrow it"""
-        requests_to_user_open = RequestBook.objects.filter(
-            requester=user, decision_datetime__isnull=True
-        ).order_by("-request_datetime")
-        requests_to_user_accept = RequestBook.objects.filter(
-            requester=user, decision_datetime__isnull=False, decision=True
-        ).order_by("-request_datetime")
-        requests_to_user_reject = RequestBook.objects.filter(
-            requester=user, decision_datetime__isnull=False, decision=False
-        ).order_by("-request_datetime")
-
-        context["requests_to_user_open"] = requests_to_user_open
-        context["requests_to_user_accept"] = requests_to_user_accept
-        context["requests_to_user_reject"] = requests_to_user_reject
+        context.update(self._get_requests_by_status(user, "requester"))
         return context
 
 
@@ -473,6 +508,9 @@ class RequestsToUserSingle(LoginRequiredMixin, DetailView):
 
 
 class RequestDecisionView(LoginRequiredMixin, UpdateView):
+    # Decision mapping for cleaner logic
+    DECISION_MAP = {"Approve": True, "Reject": False}
+
     def post(self, request, *args, **kwargs):
         time_window = timedelta(seconds=1)  # Calculate a small time window for matching
         decisionInput = request.POST.get("decision")
@@ -489,10 +527,8 @@ class RequestDecisionView(LoginRequiredMixin, UpdateView):
                 request_datetime__gte=request_datetime - time_window,
                 request_datetime__lte=request_datetime + time_window,
             )
-            if decisionInput == "Approve":
-                request_book.decision = True
-            elif decisionInput == "Reject":
-                request_book.decision = False
+            # Use decision map for cleaner conditional logic
+            request_book.decision = self.DECISION_MAP.get(decisionInput)
             request_book.reject_reason = reject_reason
             request_book.decision_datetime = timezone.now()
             request_book.save()

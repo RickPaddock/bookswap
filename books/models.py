@@ -215,6 +215,7 @@ class RequestBook(models.Model):
     request_datetime = models.DateTimeField(default=timezone.now, blank=False)
     decision = models.BooleanField(null=True, blank=True)
     decision_datetime = models.DateTimeField(null=True, blank=True)
+    cancelled_datetime = models.DateTimeField(null=True, blank=True)
 
     REJECT_REASON_CHOICES = [
         ("Book no longer owned", "Book no longer owned"),

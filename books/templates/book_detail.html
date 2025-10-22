@@ -23,6 +23,16 @@
                     </form>
                 </div>
             {% endif %}
+            {% if user.is_authenticated and is_owner %}
+                <div class="d-flex justify-content-end">
+                    <form method="post" action="{% url 'remove_book' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="book_id" value="{{ book.pk }}">
+                        <input type="hidden" name="redirect_url" value="single_book">
+                        <button type="submit" class="btn btn-lg btn-outline-danger" onclick="return confirm('Remove this book from your library?')">Remove from Library</button>
+                    </form>
+                </div>
+            {% endif %}
         </div>
         <br>
         <div class="row">

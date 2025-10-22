@@ -35,6 +35,7 @@ from .models import (
     UserBook,
     Wishlist,
     RequestBook,
+    Transaction,
 )
 from django.contrib.auth.mixins import LoginRequiredMixin
 import os
@@ -157,12 +158,12 @@ class UserAccount(TemplateView):
 
         # Query the number of requests the user has made. Open and Closed
         user_requests_open = RequestBook.objects.filter(
-            requester=user_pk, decision_datetime__isnull=True
+            requester=user_pk, decision_datetime__isnull=True, cancelled_datetime__isnull=True
         ).order_by("request_datetime")
 
         # Query the number of requests the user has recieved. Open and Closed
         user_requests_recieved_open = RequestBook.objects.filter(
-            owner=user_pk, decision_datetime__isnull=True
+            owner=user_pk, decision_datetime__isnull=True, cancelled_datetime__isnull=True
         ).order_by("request_datetime")
 
         # Add the data to the context
@@ -212,9 +213,9 @@ class SingleBook(DetailView):
             # Check if logged in user owns the book
             is_owner = owners.filter(user=user).exists()
 
-            # If user requested the book, extract list of owners
+            # If user requested the book, extract list of owners (exclude cancelled requests)
             user_requests = RequestBook.objects.filter(
-                book=book, requester=user, decision_datetime__isnull=True
+                book=book, requester=user, decision_datetime__isnull=True, cancelled_datetime__isnull=True
             )
             requested_owner_usernames = user_requests.values_list(
                 "owner__username", flat=True
@@ -439,7 +440,7 @@ class RequestsToUserAll(LoginRequiredMixin, ListView):
 
     # Registry pattern for request status filters - eliminates code duplication
     REQUEST_STATUS_FILTERS = {
-        "open": {"decision_datetime__isnull": True},
+        "open": {"decision_datetime__isnull": True, "cancelled_datetime__isnull": True},
         "accept": {"decision_datetime__isnull": False, "decision": True},
         "reject": {"decision_datetime__isnull": False, "decision": False},
     }
@@ -535,3 +536,123 @@ class RequestDecisionView(LoginRequiredMixin, UpdateView):
             return HttpResponseRedirect(
                 reverse("requests_to_user_all") + "?filter_by=owner"
             )
+
+
+class CancelRequestView(LoginRequiredMixin, View):
+    """Allow requesters to cancel their own pending requests"""
+
+    def post(self, request, *args, **kwargs):
+        request_id = request.POST.get("request_id")
+
+        if not request_id:
+            messages.error(request, "Invalid request")
+            return redirect("requests_to_user_all") + "?filter_by=requester"
+
+        try:
+            request_book = RequestBook.objects.get(pk=request_id)
+
+            # Verify the current user is the requester
+            if request_book.requester != request.user:
+                logger.warning(
+                    "User %s attempted to cancel request %s belonging to %s",
+                    request.user.username,
+                    request_id,
+                    request_book.requester.username,
+                )
+                messages.error(request, "You can only cancel your own requests")
+                return redirect("requests_to_user_all") + "?filter_by=requester"
+
+            # Verify the request is still pending (not already decided)
+            if request_book.decision_datetime is not None:
+                messages.error(request, "This request has already been responded to and cannot be cancelled")
+                return redirect("requests_to_user_all") + "?filter_by=requester"
+
+            # Verify the request hasn't already been cancelled
+            if request_book.cancelled_datetime is not None:
+                messages.info(request, "This request was already cancelled")
+                return redirect("requests_to_user_all") + "?filter_by=requester"
+
+            # Cancel the request
+            request_book.cancelled_datetime = timezone.now()
+            request_book.save()
+
+            logger.info(
+                "User %s cancelled request %s for book '%s'",
+                request.user.username,
+                request_id,
+                request_book.book.title,
+            )
+            messages.success(request, f"Request for '{request_book.book.title}' has been cancelled")
+
+        except RequestBook.DoesNotExist:
+            logger.error("Request %s not found for cancellation", request_id)
+            messages.error(request, "Request not found")
+
+        return HttpResponseRedirect(reverse("requests_to_user_all") + "?filter_by=requester")
+
+
+class RemoveBookFromLibraryView(LoginRequiredMixin, View):
+    """Allow users to remove books from their own library"""
+
+    def post(self, request, *args, **kwargs):
+        book_id = request.POST.get("book_id")
+        redirect_url = request.POST.get("redirect_url", "user_account")
+
+        if not book_id:
+            messages.error(request, "Invalid book")
+            return redirect(redirect_url, pk=request.user.pk)
+
+        try:
+            book = Book.objects.get(pk=book_id)
+
+            # Find the UserBook relationship
+            try:
+                user_book = UserBook.objects.get(user=request.user, book=book)
+
+                # Check if there are any active transactions for this book
+                active_transactions = Transaction.objects.filter(
+                    owner=request.user,
+                    book=book,
+                    returned_datetime__isnull=True
+                ).exists()
+
+                if active_transactions:
+                    messages.error(
+                        request,
+                        f"Cannot remove '{book.title}' - you have an active loan for this book. "
+                        "Please wait until it's returned."
+                    )
+                    logger.warning(
+                        "User %s attempted to remove book %s with active transactions",
+                        request.user.username,
+                        book_id
+                    )
+                else:
+                    # Delete the UserBook relationship
+                    user_book.delete()
+
+                    logger.info(
+                        "User %s removed book '%s' (ID: %s) from their library",
+                        request.user.username,
+                        book.title,
+                        book_id
+                    )
+                    messages.success(request, f"'{book.title}' has been removed from your library")
+
+            except UserBook.DoesNotExist:
+                messages.error(request, "You don't own this book")
+                logger.warning(
+                    "User %s attempted to remove book %s they don't own",
+                    request.user.username,
+                    book_id
+                )
+
+        except Book.DoesNotExist:
+            logger.error("Book %s not found for removal", book_id)
+            messages.error(request, "Book not found")
+
+        # Handle redirect
+        if redirect_url == "single_book":
+            return redirect("single_book", pk=book_id)
+        else:
+            return redirect("user_account", pk=request.user.pk)

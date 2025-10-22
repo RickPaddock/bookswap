@@ -25,7 +25,17 @@
                 <p>You have {{ user_book_count }} book{{ user_book_count|pluralize }}:</p>
                 <ol>
                     {% for book in user_books %}
-                        <li><a href="{% url 'single_book' pk=book.pk %}">{{ book.title }}</a></li>
+                        <li>
+                            <a href="{% url 'single_book' pk=book.pk %}">{{ book.title }}</a>
+                            {% if user.is_authenticated and user.username == user_username.username %}
+                                <form method="post" action="{% url 'remove_book' %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="book_id" value="{{ book.pk }}">
+                                    <input type="hidden" name="redirect_url" value="user_account">
+                                    <button type="submit" class="btn btn-sm btn-link text-danger p-0 ms-2" onclick="return confirm('Remove this book from your library?')" title="Remove from library">✕</button>
+                                </form>
+                            {% endif %}
+                        </li>
                     {% endfor %}
                 </ol>
             </div>

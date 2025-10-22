@@ -49,6 +49,8 @@
                     <th>Request Datetime</th>
                     {% if filter_by == 'owner' %}
                         <th>Request Details</th>
+                    {% else %}
+                        <th>Action</th>
                     {% endif %}
                 </tr>
             </thead>
@@ -64,6 +66,14 @@
                         <td>{{ request_book.request_datetime }}</td>
                         {% if filter_by == 'owner' %}
                             <td><a href="{% url 'requests_to_user_single' pk=request_book.pk %}">View</a></td>
+                        {% else %}
+                            <td>
+                                <form method="post" action="{% url 'cancel_request' %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="request_id" value="{{ request_book.pk }}">
+                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to cancel this request?')">Cancel</button>
+                                </form>
+                            </td>
                         {% endif %}
                     </tr>
                 {% endfor %}

@@ -39,6 +39,8 @@ from books.views import (
     AddToWishListConfirmView,
     RequestRaisedView,
     RequestDecisionView,
+    CancelRequestView,
+    RemoveBookFromLibraryView,
 )
 
 # Django provides login and logout views so we dont create them in views.py
@@ -95,6 +97,16 @@ urlpatterns = [
         "request_decision/",
         RequestDecisionView.as_view(),
         name="request_decision",
+    ),
+    path(
+        "cancel_request/",
+        CancelRequestView.as_view(),
+        name="cancel_request",
+    ),
+    path(
+        "remove_book/",
+        RemoveBookFromLibraryView.as_view(),
+        name="remove_book",
     ),
 ]
 

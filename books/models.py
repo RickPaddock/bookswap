@@ -8,6 +8,9 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 import misaka  # Misaka allows rendering markdown
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # User model imports pre-defined django user items. Easier for us.
@@ -186,9 +189,9 @@ def update_wishlist_ownership(sender, instance, created, **kwargs):
     Update Wishlist when a user now owns the book the wished to have
     """
     # If new ownership is created, then update removed_datetime
-    print("RICK - It ran")
+    logger.debug("UserBook post_save signal triggered")
     if created:
-        print("Inside created")
+        logger.debug("New UserBook ownership created, checking wishlist")
         if wishlist_entry := Wishlist.objects.filter(
             user=instance.user, book=instance.book
         ).first():

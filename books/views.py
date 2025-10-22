@@ -2,6 +2,9 @@ from django.conf import settings  # To pull in env variables
 from django.shortcuts import render
 from django.http import Http404
 from django.db.models import Count, Q
+import logging
+
+logger = logging.getLogger(__name__)
 from django.views.generic import (
     CreateView,
     TemplateView,
@@ -346,7 +349,7 @@ class AddToLibraryWishView(View):
         ID_OTHER = request.POST.get("ID_OTHER")
 
         if id_google and title:
-            print("Adding or retrieving existing book...")
+            logger.debug("Adding or retrieving existing book with ID: %s", id_google)
             try:
                 book, created = Book.objects.get_or_create(
                     google_book_id=id_google,
@@ -361,8 +364,7 @@ class AddToLibraryWishView(View):
                         "ID_OTHER": ID_OTHER,
                     },
                 )
-                print(f"Book: {book}")
-                print(f"Created: {created}")
+                logger.debug("Book: %s, Created: %s", book.title, created)
                 if action == "add_to_library":
                     user.book_set.add(book)
                     return redirect(
@@ -375,7 +377,7 @@ class AddToLibraryWishView(View):
                     )  # Redirect to a confirmation page
 
             except Exception as e:
-                print("Exception!", str(e))
+                logger.error("Error adding book to library/wishlist: %s", str(e), exc_info=True)
 
 
 class AddToLibraryConfirmView(TemplateView):
@@ -420,10 +422,10 @@ class RequestsToUserAll(LoginRequiredMixin, ListView):
         context["filter_by"] = filter_by
 
         if filter_by == "owner":
-            print("OWNER:", filter_by)
+            logger.debug("Filtering requests by owner: %s", user.username)
             context = self.get_requests_by_owner(user, context)
         elif filter_by == "requester":
-            print("REQUESTER:", filter_by)
+            logger.debug("Filtering requests by requester: %s", user.username)
             context = self.get_requests_by_requester(user, context)
         else:
             raise Http404("Filter parameter is not valid.")

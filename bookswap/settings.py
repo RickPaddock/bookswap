@@ -25,6 +25,7 @@ else:
     DEBUG = True
 
 # LOAD ENVIRONMENT VARIABLES from prod or dev depending on above
+SECRET_KEY = os.getenv("SECRET_KEY")
 GOOGLE_BOOKS_API_KEY = os.getenv("GOOGLE_BOOKS_API_KEY")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -39,8 +40,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-k5h52nbo#)vu+v9*#sq3xpmr=1-hk@=jk+pk^3)=p-fv%pzj%_"
-
+# SECRET_KEY is now loaded from environment variables above (line 28)
 
 ALLOWED_HOSTS = []
 

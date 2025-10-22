@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python manage.py showmigrations:*)",
+      "Bash(dir:*)",
+      "Bash(venv\\Scripts\\python.exe:*)",
+      "Bash(./venv/Scripts/python.exe manage.py showmigrations:*)",
+      "Bash(./venv/Scripts/python.exe manage.py shell:*)",
+      "Bash(./venv/Scripts/python.exe:*)",
+      "Bash(git check-ignore:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

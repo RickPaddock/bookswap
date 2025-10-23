@@ -1,36 +1,37 @@
 {% extends "base.html" %}
 {% block body_block %}
 
-    <div class="container my-5">
-        <div class="p-3 text-center bg-body-tertiary rounded-3">
-            <h1 class="text-body-emphasis">Groups</h1>
-            <p class="lead">List of all groups</p>
-        </div>
-        <div class="row">
-            <div class="col">
-                <br>
-                {% if groups %}
-                    <ol>
-                        {% for rec in groups %}
-                        <li><a href={{rec.slug}}>{{rec.group_name}}</a></li>
-                        <p>{{rec.description}}</p>
-                        <ul>
-                            <span class="badge">{{rec.members.count}}</span> member{{rec.members.count|pluralize}}
-                        </ul>
-                        <br>
+    <div class="page-header">
+        <h1>Groups</h1>
+        <p class="lead">Connect with book lovers in shared interest communities</p>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            {% if groups %}
+                <div style="display: flex; flex-direction: column; gap: var(--space-lg);">
+                    {% for rec in groups %}
+                        <div style="background-color: var(--bg-secondary); padding: var(--space-lg); border-radius: var(--radius-lg); border: 1px solid var(--bg-tertiary);">
+                            <h3 style="margin: 0 0 var(--space-sm) 0;">
+                                <a href="{{rec.slug}}" style="color: var(--bs-primary); text-decoration: none;">{{rec.group_name}}</a>
+                            </h3>
+                            <p style="color: var(--text-secondary); margin: 0 0 var(--space-md) 0;">{{rec.description}}</p>
+                            <span class="book-badge">{{rec.members.count}} member{{rec.members.count|pluralize}}</span>
+                        </div>
                     {% endfor %}
-                    </ol>
-                    {% else %}
-                        <p>NO GROUPS FOUND</p>
-                {% endif %}
-            </div>
-            <div class="col">
-                {% if user.is_authenticated %}
-                    <br>
-                    <a href="{% url 'create_group'%}" class='btn btn-lg btn-fill btn-warning'>Create New Group!</a>
-                    <br>
-                {% endif %}
-            </div>
+                </div>
+            {% else %}
+                <div style="background-color: var(--bg-secondary); padding: var(--space-xl); border-radius: var(--radius-lg); text-align: center; color: var(--text-muted);">
+                    <p>No groups found. Be the first to create one!</p>
+                </div>
+            {% endif %}
+        </div>
+        <div class="col-md-4">
+            {% if user.is_authenticated %}
+                <div style="position: sticky; top: var(--space-lg);">
+                    <a href="{% url 'create_group'%}" class="btn btn-primary" style="width: 100%; padding: var(--space-md);">Create New Group</a>
+                </div>
+            {% endif %}
         </div>
     </div>
 

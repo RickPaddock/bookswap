@@ -3,8 +3,10 @@
 {% load static %}
 
     {% if query %}
-        <h2>Search results for "{{ query }}"</h2>
-        <br>
+        <div class="page-header">
+            <h1>Search Results</h1>
+            <p class="lead">Found {{ books|length }} result{{ books|length|pluralize }} for "{{ query }}"</p>
+        </div>
         {% if books %}
             <ol>
                 {% for book in books %}

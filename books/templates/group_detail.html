@@ -1,20 +1,19 @@
 {% extends "base.html" %}
 {% block body_block %}
 
-    <div class="container my-5">
-        <div class="p-3 text-center bg-body-tertiary rounded-3">
-            <h1 class="text-body-emphasis">{{group.group_name}}</h1>
-            <h3>{{group.description}}</h3>
-            {% if user.is_authenticated %}
-                <div class="d-flex justify-content-end">
-                    {% if user in group.members.all %} <!-- if logged in user already exists in model class group -->
-                        <a href = "{%url 'leave_group' slug=group.slug %}" class='btn btn-lg btn-fill btn-warning button-leave'> Joined</a>
-                    {% else %}
-                        <a href = "{%url 'join_group' slug=group.slug %}" class='btn btn-lg btn-fill btn-primary'> Join</a>
-                    {% endif %}
-                </div>
-            {% endif %}
-        </div>
+    <div class="page-header">
+        <h1>{{group.group_name}}</h1>
+        <p class="lead">{{group.description}}</p>
+        {% if user.is_authenticated %}
+            <div style="margin-top: var(--space-lg);">
+                {% if user in group.members.all %} <!-- if logged in user already exists in model class group -->
+                    <a href="{%url 'leave_group' slug=group.slug %}" class="btn btn-primary button-leave">Joined</a>
+                {% else %}
+                    <a href="{%url 'join_group' slug=group.slug %}" class="btn btn-primary">Join Group</a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
         <br>
         <div class="row">
             <div class="col">
@@ -36,16 +35,16 @@
     </div>
     <script>
         var btn = document.querySelector(".button-leave");
-        var current_colour = btn.style.background;
-        console.log(current_colour)
-        btn.addEventListener("mouseover", function() {
-            this.textContent = "Leave";
-            this.style.background = "rgba(255,0,0,0.6)";
-        })
-        btn.addEventListener("mouseout", function() {
-            this.textContent = "Joined";
-            this.style.background = current_colour;
-        })
+        if (btn) {
+            btn.addEventListener("mouseover", function() {
+                this.textContent = "Leave";
+                this.style.backgroundColor = "var(--bs-danger)";
+            });
+            btn.addEventListener("mouseout", function() {
+                this.textContent = "Joined";
+                this.style.backgroundColor = "var(--bs-primary)";
+            });
+        }
     </script>
 
 {% endblock %}

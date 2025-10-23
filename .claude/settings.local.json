@@ -6,7 +6,10 @@
       "mcp__flow-nexus",
       "Bash(npx claude-flow@latest:*)",
       "WebSearch",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(python manage.py:*)",
+      "Bash(npx --version:*)",
+      "Bash(echo:*)"
     ],
     "deny": []
   }

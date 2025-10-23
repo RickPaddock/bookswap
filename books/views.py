@@ -213,6 +213,11 @@ class SingleBook(DetailView):
             # Check if logged in user owns the book
             is_owner = owners.filter(user=user).exists()
 
+            # Check if logged in user has book on wishlist
+            is_wished = Wishlist.objects.filter(
+                book=book, user=user, removed_datetime__isnull=True
+            ).exists()
+
             # If user requested the book, extract list of owners (exclude cancelled requests)
             user_requests = RequestBook.objects.filter(
                 book=book, requester=user, decision_datetime__isnull=True, cancelled_datetime__isnull=True
@@ -223,9 +228,11 @@ class SingleBook(DetailView):
         else:
             requested_owner_usernames = []
             is_owner = False
+            is_wished = False
 
         context["owners"] = owners
         context["is_owner"] = is_owner
+        context["is_wished"] = is_wished
         context["user_wish"] = user_wish
         context["user_wish_count"] = user_wish_count
         context["requested_owner_usernames"] = requested_owner_usernames
@@ -656,3 +663,52 @@ class RemoveBookFromLibraryView(LoginRequiredMixin, View):
             return redirect("single_book", pk=book_id)
         else:
             return redirect("user_account", pk=request.user.pk)
+
+
+class RemoveFromWishlistView(LoginRequiredMixin, View):
+    """Allow users to remove books from their wishlist"""
+
+    def post(self, request, *args, **kwargs):
+        book_id = request.POST.get("book_id")
+
+        if not book_id:
+            messages.error(request, "Invalid book")
+            return redirect("user_account", pk=request.user.pk)
+
+        try:
+            book = Book.objects.get(pk=book_id)
+
+            # Find and remove the wishlist entry
+            try:
+                wishlist_entry = Wishlist.objects.get(
+                    user=request.user,
+                    book=book,
+                    removed_datetime__isnull=True
+                )
+
+                # Soft delete by setting removed_datetime
+                wishlist_entry.removed_datetime = timezone.now()
+                wishlist_entry.save()
+
+                logger.info(
+                    "User %s removed book '%s' (ID: %s) from their wishlist",
+                    request.user.username,
+                    book.title,
+                    book_id
+                )
+                messages.success(request, f"'{book.title}' has been removed from your wishlist")
+
+            except Wishlist.DoesNotExist:
+                messages.error(request, "This book is not in your wishlist")
+                logger.warning(
+                    "User %s attempted to remove book %s from wishlist but it wasn't there",
+                    request.user.username,
+                    book_id
+                )
+
+        except Book.DoesNotExist:
+            logger.error("Book %s not found for wishlist removal", book_id)
+            messages.error(request, "Book not found")
+
+        # Always redirect to the book detail page
+        return redirect("single_book", pk=book_id)

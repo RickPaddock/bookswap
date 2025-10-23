@@ -2,11 +2,20 @@
 {% block body_block %}
 {% load static %}
 
-    <div class="container my-5">
-        <div class="p-3 text-center bg-body-tertiary rounded-3">
-            <h1 class="text-body-emphasis">{{book.title}}</h1>
-            {% if user.is_authenticated and not is_owner %}
-                <div class="d-flex justify-content-end">
+    <div class="page-header">
+        <h1>{{book.title}}</h1>
+        <p class="lead" style="margin-bottom: var(--space-lg);">by {{ book.authors }}</p>
+        {% if user.is_authenticated %}
+            <div style="margin-top: var(--space-lg); display: flex; gap: var(--space-md); justify-content: center; flex-wrap: wrap;">
+                <!-- Library Button -->
+                {% if is_owner %}
+                    <form method="post" action="{% url 'remove_book' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="book_id" value="{{ book.pk }}">
+                        <input type="hidden" name="redirect_url" value="single_book">
+                        <button type="submit" class="btn" style="background-color: var(--bs-danger); color: white; border: none; min-width: 180px;" onclick="return confirm('Remove this book from your library?')">Remove from Library</button>
+                    </form>
+                {% else %}
                     <form method="post" action="{% url 'add_to_library' %}">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="add_to_library">
@@ -19,21 +28,33 @@
                         <input type="hidden" name="ID_ISBN_13" value="{{ book.ID_ISBN_13 }}">
                         <input type="hidden" name="ID_ISBN_10" value="{{ book.ID_ISBN_10 }}">
                         <input type="hidden" name="ID_OTHER" value="{{ book.ID_OTHER }}">
-                        <button type="submit" class="btn btn-lg btn-fill btn-primary">I own this! Add to my library</button>
+                        <button type="submit" class="btn btn-primary" style="min-width: 180px;">Add to Library</button>
                     </form>
-                </div>
-            {% endif %}
-            {% if user.is_authenticated and is_owner %}
-                <div class="d-flex justify-content-end">
-                    <form method="post" action="{% url 'remove_book' %}">
+                {% endif %}
+
+                <!-- Wishlist Button -->
+                {% if is_wished %}
+                    <form method="post" action="{% url 'remove_from_wishlist' %}">
                         {% csrf_token %}
                         <input type="hidden" name="book_id" value="{{ book.pk }}">
-                        <input type="hidden" name="redirect_url" value="single_book">
-                        <button type="submit" class="btn btn-lg btn-outline-danger" onclick="return confirm('Remove this book from your library?')">Remove from Library</button>
+                        <button type="submit" class="btn" style="background-color: var(--bs-secondary); color: white; border: none; min-width: 180px;">Remove from Wishlist</button>
                     </form>
-                </div>
-            {% endif %}
-        </div>
+                {% else %}
+                    <form method="post" action="{% url 'add_to_library' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="add_to_wishlist">
+                        <input type="hidden" name="id_google" value="{{ book.google_book_id }}">
+                        <input type="hidden" name="title" value="{{ book.title }}">
+                        <input type="hidden" name="authors" value="{{ book.authors }}">
+                        <input type="hidden" name="thumbnail" value="{{ book.thumbnail }}">
+                        <input type="hidden" name="description" value="{{ book.description }}">
+                        <input type="hidden" name="pageCount" value="{{ book.pageCount }}">
+                        <button type="submit" class="btn" style="background-color: var(--bs-secondary); color: white; border: none; min-width: 180px;">Add to Wishlist</button>
+                    </form>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
         <br>
         <div class="row">
             <div class="col">
@@ -65,9 +86,9 @@
                                     <input type="hidden" name="google_book_id" value="{{ book.google_book_id }}">
                                     <!-- If already requested then disable button -->
                                     {% if owner.user.username in requested_owner_usernames%}
-                                        <button type="submit" class='btn btn-sm btn-outline-warning disabled'>Requested</button>
+                                        <button type="submit" class="btn btn-sm" style="background-color: var(--bg-tertiary); color: var(--text-muted); border: 1px solid var(--bg-elevated); cursor: not-allowed;" disabled>Requested</button>
                                     {% else %}
-                                        <button type="submit" class='btn btn-sm btn-outline-warning'>Request</button>
+                                        <button type="submit" class="btn btn-sm" style="background-color: var(--bs-secondary); color: white; border: none;">Request</button>
                                     {% endif %}
                                 </form>
                             {% endif %}

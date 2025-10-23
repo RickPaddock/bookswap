@@ -1,24 +1,21 @@
 {% extends "base.html" %}
 {% block body_block %}
 
-    <div class="container my-3">
-        <div class="p-3 text-center bg-body-tertiary rounded-3">
-            <h1 class="text-body-emphasis">{{user_username.username|upper}}</h1>
-            <h1 class="text-body-emphasis"><span lang="gr">Πληροφορίες λογαριασμού</span></h1>
-            <p class="lead">Account Information</p>
-        </div>
+    <div class="page-header">
+        <h1>{{user_username.username|upper}}</h1>
+        <h2 style="font-size: 1.75rem; margin: var(--space-md) 0; background: linear-gradient(135deg, var(--bs-secondary), var(--bs-accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;"><span lang="gr">Πληροφορίες λογαριασμού</span></h2>
+        <p class="lead">Account Information</p>
+    </div>
         <br>
         {% if user.is_authenticated and user.username == user_username.username %}
-            <div class="row">
-                <div class="col">
-                    <a href="{% url 'requests_to_user_all' %}?filter_by=requester">Your book requests ({{user_requests_open_count}})</a>
-                    <!-- <p>Your book requests ({{user_requests_open_count}})</p> -->
+            <div class="row" style="margin-bottom: var(--space-lg);">
+                <div class="col" style="display: flex; justify-content: center;">
+                    <a href="{% url 'requests_to_user_all' %}?filter_by=requester" class="btn btn-primary" style="min-width: 200px;">Your book requests ({{user_requests_open_count}})</a>
                 </div>
-                <div class="col">
-                    <a href="{% url 'requests_to_user_all' %}?filter_by=owner">Requested from you ({{user_requests_recieved_open_count}})</a>
+                <div class="col" style="display: flex; justify-content: center;">
+                    <a href="{% url 'requests_to_user_all' %}?filter_by=owner" class="btn btn-primary" style="min-width: 200px;">Requested from you ({{user_requests_recieved_open_count}})</a>
                 </div>
             </div>
-            <hr>
         {% endif %}
         <div class="row">
             <div class="col">

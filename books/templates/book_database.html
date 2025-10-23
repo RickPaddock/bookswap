@@ -1,34 +1,43 @@
 {% extends "base.html" %}
+{% load static %}
 {% block body_block %}
 
-    <div class="container my-5">
-        <div class="p-3 text-center bg-body-tertiary rounded-3">
-            <h1 class="text-body-emphasis">Books</h1>
-            <p class="lead">List of all available books</p>
-        </div>
-        <br>
-        <div class="container">
-            <div class="row">
-                {% for book in books %}
-                    <!-- md-2 = large screen, sm-4 = medium, xs-6 = small. img-fluid below ensures fluidity -->
-                    <div class="col-md-2 col-sm-4 col-xs-6">
-                        <!-- <a href="{% url 'single_book' pk=book.pk %}">{{book.title}}</a> -->
-                        {% if book.thumbnail %}
-                            <a href="{% url 'single_book' pk=book.pk %}"><img src="{{ book.thumbnail }}" class="img-fluid" alt="{{ book.title }}"></a>
-                        {% else %}
-                            <!-- Placeholder image or alternative content if thumbnail is not available -->
-                            <a href="{% url 'single_book' pk=book.pk %}">{{ book.title }}</a>
-                            <p><i>No thumbnail available</i></p>
-                        {% endif %}
-                        Copies: <span class="badge">{{book.owner.count}}</span>
-                        <!-- Authors: {{book.authors}}<br> -->
-                    </div>
-                    {% if forloop.counter|divisibleby:6 %}
-                        </div><div class="row"> <!-- Make new row every 7 thumbnails (for large screen)-->
+    <div class="page-header">
+        <h1>Books</h1>
+        <p class="lead">Discover and share books with the community</p>
+    </div>
+
+    <div class="book-grid">
+        {% for book in books %}
+            <a href="{% url 'single_book' pk=book.pk %}" class="book-card" style="text-decoration: none;">
+                <div class="book-card-image-wrapper">
+                    {% if book.thumbnail %}
+                        <img src="{{ book.thumbnail }}" class="book-card-image" alt="{{ book.title }}">
+                    {% else %}
+                        <div class="book-card-placeholder">
+                            <div>
+                                <p style="margin: 0; font-weight: 600;">{{ book.title }}</p>
+                                <p style="margin: var(--space-sm) 0 0; font-size: 0.75rem;">No cover available</p>
+                            </div>
+                        </div>
                     {% endif %}
-                {% endfor %}
+                </div>
+                <div class="book-card-content">
+                    <div class="book-card-title">{{ book.title }}</div>
+                    <div class="book-card-meta">
+                        {% if book.owner.count > 0 %}
+                            <span class="book-badge book-badge-success">{{ book.owner.count }} {% if book.owner.count == 1 %}copy{% else %}copies{% endif %}</span>
+                        {% else %}
+                            <span class="book-badge book-badge-warning">Wanted</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </a>
+        {% empty %}
+            <div style="grid-column: 1 / -1; text-align: center; padding: var(--space-2xl); color: var(--text-muted);">
+                <p>No books found. Start adding books to build your library!</p>
             </div>
-        </div>
+        {% endfor %}
     </div>
 
 {% endblock %}

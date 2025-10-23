@@ -1,13 +1,13 @@
 {% extends "base.html" %}
-{% load bootstrap3 %} <!-- bootstrap3 comes from installed apps -->
+{% load crispy_forms_tags %}
 
 {% block body_block %}
 
     <h4>Create a new group!</h4>
     <form action="{% url 'create_group' %}" method="post">
         {% csrf_token %}
-        {% bootstrap_form form %}
-        <input type="submit" class="btn btn-primary btn-large" value="Create">
+        {{ form|crispy }}
+        <button type="submit" class="btn btn-primary btn-lg">Create</button>
     </form>
 
 {% endblock %}

@@ -3,6 +3,8 @@ from django.contrib.auth.forms import (
     UserCreationForm,
 )  # Helps create user accounts. See django documentation
 from django.forms import ModelForm
+from crispy_forms.helper import FormHelper
+from crispy_forms.layout import Submit
 from .models import RequestBook
 
 
@@ -20,6 +22,11 @@ class UserCreateForm(UserCreationForm):
         # Labels show on the template
         self.fields["username"].label = "Display Name"
         self.fields["email"].label = "Email Address"
+
+        # Crispy forms helper
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.add_input(Submit('submit', 'Sign Up', css_class='btn btn-primary'))
 
 
 class RequestStatusForm(ModelForm):

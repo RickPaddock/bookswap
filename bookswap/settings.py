@@ -59,6 +59,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "debug_toolbar",
+    "crispy_forms",
+    "crispy_bootstrap5",
     "books",
     "bootstrap3",
 ]
@@ -160,6 +162,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Set our customer user model and auth user
 AUTH_USER_MODEL = "books.CustomUser"
+
+# Crispy Forms Configuration
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 # Only run debug toolbar locally
 INTERNAL_IPS = ["127.0.0.1"]

@@ -5,7 +5,8 @@
       "mcp__claude-flow@alpha",
       "mcp__flow-nexus",
       "Bash(npx claude-flow@latest:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(pip install:*)"
     ],
     "deny": []
   }

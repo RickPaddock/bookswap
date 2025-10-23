@@ -9,7 +9,8 @@
       "Bash(./venv/Scripts/python.exe:*)",
       "Bash(git check-ignore:*)",
       "Bash(python -m pytest:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(del bookstests.py)"
     ],
     "deny": [],
     "ask": []

@@ -7,7 +7,9 @@
       "Bash(./venv/Scripts/python.exe manage.py showmigrations:*)",
       "Bash(./venv/Scripts/python.exe manage.py shell:*)",
       "Bash(./venv/Scripts/python.exe:*)",
-      "Bash(git check-ignore:*)"
+      "Bash(git check-ignore:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []

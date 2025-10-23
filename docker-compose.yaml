@@ -1,4 +1,4 @@
-version: '3'
+version: '3.8'
 
 services:
   web:
@@ -9,14 +9,35 @@ services:
       - "8000:8000"
     volumes:
       - .:/code
+    env_file:
+      - .env
     depends_on:
-      - postgres-book
+      postgres:
+        condition: service_healthy
+    networks:
+      - bookswap_network
 
-  postgres-book:
-    image: postgres:12
+  postgres:
+    image: postgres:16-alpine
     environment:
-      POSTGRES_DB: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ccaassss1
+      POSTGRES_DB: ${DB_NAME:-bookswap_db}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bookswap_network
+
+volumes:
+  postgres_data:
+
+networks:
+  bookswap_network:
+    driver: bridge

@@ -1,0 +1,92 @@
+{
+  "modes": {
+    "specification": {
+      "name": "Specification",
+      "description": "Define requirements, user stories, and acceptance criteria",
+      "agent": "sparc-researcher",
+      "outputs": [
+        "requirements.md",
+        "user-stories.md",
+        "acceptance-criteria.md"
+      ],
+      "qualityGates": [
+        "All requirements documented",
+        "Edge cases identified",
+        "Acceptance criteria defined"
+      ]
+    },
+    "pseudocode": {
+      "name": "Pseudocode",
+      "description": "Design algorithms and logic flow",
+      "agent": "sparc-designer",
+      "outputs": [
+        "algorithm-design.md",
+        "logic-flow.md",
+        "data-structures.md"
+      ],
+      "qualityGates": [
+        "Algorithm logic validated",
+        "Complexity analyzed",
+        "Data structures defined"
+      ]
+    },
+    "architecture": {
+      "name": "Architecture",
+      "description": "System design and component definition",
+      "agent": "sparc-designer",
+      "outputs": [
+        "system-design.md",
+        "components.md",
+        "interfaces.md"
+      ],
+      "qualityGates": [
+        "System design approved",
+        "Component interfaces defined",
+        "Integration plan created"
+      ]
+    },
+    "refinement": {
+      "name": "Refinement",
+      "description": "TDD implementation and iterative improvement",
+      "agent": "sparc-coder",
+      "outputs": [
+        "implementation",
+        "tests",
+        "optimization-report.md"
+      ],
+      "qualityGates": [
+        "Tests passing",
+        "Code coverage adequate",
+        "Performance optimized"
+      ]
+    },
+    "completion": {
+      "name": "Completion",
+      "description": "Integration testing and deployment preparation",
+      "agent": "sparc-tester",
+      "outputs": [
+        "integration-tests",
+        "documentation",
+        "deployment-guide.md"
+      ],
+      "qualityGates": [
+        "All tests passing",
+        "Documentation complete",
+        "Ready for deployment"
+      ]
+    }
+  },
+  "workflow": [
+    "specification",
+    "pseudocode",
+    "architecture",
+    "refinement",
+    "completion"
+  ],
+  "settings": {
+    "enforceQualityGates": true,
+    "allowPhaseSkipping": false,
+    "requireDocumentation": true,
+    "parallelizeIndependentTasks": true
+  }
+}

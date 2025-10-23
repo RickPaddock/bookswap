@@ -1,18 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python manage.py showmigrations:*)",
-      "Bash(dir:*)",
-      "Bash(venv\\Scripts\\python.exe:*)",
-      "Bash(./venv/Scripts/python.exe manage.py showmigrations:*)",
-      "Bash(./venv/Scripts/python.exe manage.py shell:*)",
-      "Bash(./venv/Scripts/python.exe:*)",
-      "Bash(git check-ignore:*)",
-      "Bash(python -m pytest:*)",
-      "Bash(mkdir:*)",
-      "Bash(del bookstests.py)"
+      "mcp__ruv-swarm",
+      "mcp__claude-flow@alpha",
+      "mcp__flow-nexus",
+      "Bash(npx claude-flow@latest:*)",
+      "WebSearch"
     ],
-    "deny": [],
-    "ask": []
+    "deny": []
   }
 }

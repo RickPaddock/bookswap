@@ -1,5 +1,5 @@
 from django.conf import settings  # To pull in env variables
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import Http404
 from django.db.models import Count, Q
 import logging
@@ -16,6 +16,8 @@ from django.views.generic import (
 )
 from .forms import UserCreateForm, RequestStatusForm
 from django.contrib import messages
+from django.contrib.auth import logout as auth_logout
+from django.contrib.auth.views import LoginView as DjangoLoginView
 from django.urls import reverse_lazy, reverse
 from django.shortcuts import get_object_or_404
 from django.db import IntegrityError
@@ -182,12 +184,30 @@ class UserAccount(TemplateView):
         return context
 
 
-class LoggedInPage(TemplateView):
-    template_name = "loggedin.html"
+class CustomLoginView(DjangoLoginView):
+    """Custom login view that redirects to user's account page with success message"""
+    template_name = "login.html"
+
+    def form_valid(self, form):
+        """Add success message and redirect to user's account page"""
+        response = super().form_valid(form)
+        messages.success(self.request, f"Welcome back, {self.request.user.username}!")
+        return response
+
+    def get_success_url(self):
+        """Redirect to the logged-in user's account page"""
+        return reverse('user_account', kwargs={'pk': self.request.user.pk})
 
 
-class LoggedOutPage(TemplateView):
-    template_name = "loggedout.html"
+class CustomLogoutView(View):
+    """Custom logout view that redirects to home page with success message"""
+
+    def post(self, request):
+        """Log out user and redirect to home"""
+        username = request.user.username if request.user.is_authenticated else "User"
+        auth_logout(request)
+        messages.info(request, f"Goodbye, {username}! You've been logged out.")
+        return redirect('index')
 
 
 class SingleBook(DetailView):
@@ -287,6 +307,17 @@ def process_book_item(item):
                 logger.warning("Invalid identifier format in book data: %s", e)
                 continue
 
+    # Extract new Google Books API fields
+    published_date = book_info.get("publishedDate", "")
+    language = book_info.get("language", "en")
+    categories = ", ".join(book_info.get("categories", []))
+    publisher = book_info.get("publisher", "")
+    average_rating = book_info.get("averageRating")
+    ratings_count = book_info.get("ratingsCount")
+    preview_link = book_info.get("previewLink", "")
+    info_link = book_info.get("infoLink", "")
+    maturity_rating = book_info.get("maturityRating", "")
+
     return {
         "id_google": id_google,
         "title": title,
@@ -297,6 +328,15 @@ def process_book_item(item):
         "ID_ISBN_13": identifier_map["ISBN_13"],
         "ID_ISBN_10": identifier_map["ISBN_10"],
         "ID_OTHER": identifier_map["OTHER"],
+        "published_date": published_date,
+        "language": language,
+        "categories": categories,
+        "publisher": publisher,
+        "average_rating": average_rating,
+        "ratings_count": ratings_count,
+        "preview_link": preview_link,
+        "info_link": info_link,
+        "maturity_rating": maturity_rating,
     }
 
 
@@ -351,17 +391,42 @@ class AddToLibraryWishView(View):
     # Expected POST parameters for cleaner extraction
     BOOK_PARAMS = [
         "action", "id_google", "title", "authors", "thumbnail",
-        "description", "pageCount", "ID_ISBN_13", "ID_ISBN_10", "ID_OTHER"
+        "description", "pageCount", "ID_ISBN_13", "ID_ISBN_10", "ID_OTHER",
+        "published_date", "language", "categories", "publisher",
+        "average_rating", "ratings_count", "preview_link", "info_link", "maturity_rating"
     ]
 
     # Action handler registry for clean dispatch pattern
     def _add_to_library(self, user, book):
-        """Add book to user's library"""
-        user.book_set.add(book)
+        """Add book to user's library
+
+        Uses get_or_create to ensure the UserBook relationship is created.
+        This handles the case where a book was previously removed and is being re-added.
+        Django's add() method is idempotent but get_or_create provides better logging.
+        """
+        user_book, created = UserBook.objects.get_or_create(user=user, book=book)
+        if created:
+            logger.debug("Created new UserBook relationship for user %s and book %s", user.username, book.title)
+        else:
+            logger.debug("UserBook relationship already exists for user %s and book %s", user.username, book.title)
 
     def _add_to_wishlist(self, user, book):
         """Add book to user's wishlist"""
-        Wishlist.objects.get_or_create(user=user, book=book)
+        wishlist_item, created = Wishlist.objects.get_or_create(
+            user=user,
+            book=book,
+            defaults={'wished_datetime': timezone.now()}
+        )
+        # If item already exists (was previously soft-deleted), clear the removed_datetime
+        if not created and wishlist_item.removed_datetime is not None:
+            wishlist_item.removed_datetime = None
+            wishlist_item.wished_datetime = timezone.now()
+            wishlist_item.save()
+            logger.debug(
+                "Re-activated wishlist item for user %s and book %s (cleared removed_datetime)",
+                user.username,
+                book.title
+            )
 
     # Map actions to (handler_method, redirect_url)
     ACTION_HANDLERS = {
@@ -374,6 +439,13 @@ class AddToLibraryWishView(View):
 
         # Extract all POST parameters using registry pattern
         params = {key: request.POST.get(key) for key in self.BOOK_PARAMS}
+
+        # Clean numeric fields - convert "None" strings and empty strings to Python None
+        def clean_numeric(value):
+            """Convert 'None' string or empty string to Python None for numeric fields"""
+            if value in ("None", "", None):
+                return None
+            return value
 
         if params["id_google"] and params["title"]:
             logger.debug("Adding or retrieving existing book with ID: %s", params["id_google"])
@@ -389,6 +461,15 @@ class AddToLibraryWishView(View):
                         "ID_ISBN_13": params["ID_ISBN_13"],
                         "ID_ISBN_10": params["ID_ISBN_10"],
                         "ID_OTHER": params["ID_OTHER"],
+                        "published_date": params["published_date"],
+                        "language": params["language"],
+                        "categories": params["categories"],
+                        "publisher": params["publisher"],
+                        "average_rating": clean_numeric(params["average_rating"]),
+                        "ratings_count": clean_numeric(params["ratings_count"]),
+                        "preview_link": params["preview_link"],
+                        "info_link": params["info_link"],
+                        "maturity_rating": params["maturity_rating"],
                     },
                 )
                 logger.debug("Book: %s, Created: %s", book.title, created)
@@ -398,6 +479,10 @@ class AddToLibraryWishView(View):
                 if handler_info:
                     handler_method, redirect_url = handler_info
                     handler_method(self, user, book)
+
+                    # Store the book ID in session so the confirm view can redirect back to it
+                    request.session['last_book_added'] = book.pk
+
                     return redirect(redirect_url)
                 else:
                     logger.warning("Invalid action received: %s", params["action"])
@@ -415,12 +500,34 @@ class AddToLibraryWishView(View):
                 return redirect("book_search")
 
 
-class AddToLibraryConfirmView(TemplateView):
-    template_name = "add_to_library_confirm.html"
+class AddToLibraryConfirmView(RedirectView):
+    """Redirect view that shows success message for library additions"""
+
+    def get_redirect_url(self, *args, **kwargs):
+        messages.success(self.request, "Book has been successfully added to your library")
+
+        # Get the book ID from the session to redirect back to book detail page
+        book_id = self.request.session.pop('last_book_added', None)
+        if book_id:
+            return reverse('single_book', kwargs={'pk': book_id})
+
+        # Fallback to user account if no book ID found
+        return reverse('user_account', kwargs={'pk': self.request.user.pk})
 
 
-class AddToWishListConfirmView(TemplateView):
-    template_name = "add_to_wishlist_confirm.html"
+class AddToWishListConfirmView(RedirectView):
+    """Redirect view that shows success message for wishlist additions"""
+
+    def get_redirect_url(self, *args, **kwargs):
+        messages.success(self.request, "Book has been successfully added to your wishlist")
+
+        # Get the book ID from the session to redirect back to book detail page
+        book_id = self.request.session.pop('last_book_added', None)
+        if book_id:
+            return reverse('single_book', kwargs={'pk': book_id})
+
+        # Fallback to user account if no book ID found
+        return reverse('user_account', kwargs={'pk': self.request.user.pk})
 
 
 class RequestRaisedView(LoginRequiredMixin, UpdateView):
@@ -429,11 +536,13 @@ class RequestRaisedView(LoginRequiredMixin, UpdateView):
         owner_id = request.POST.get("owner")
         google_book_id = request.POST.get("google_book_id")
         if requester_id and owner_id and google_book_id:
+            owner = CustomUser.objects.get(pk=owner_id)
             RequestBook.objects.create(
                 requester=CustomUser.objects.get(pk=requester_id),
-                owner=CustomUser.objects.get(pk=owner_id),
+                owner=owner,
                 book=Book.objects.get(pk=google_book_id),
             )
+            messages.success(request, f"Book request sent to {owner.username}!")
             return HttpResponseRedirect(
                 reverse("single_book", kwargs={"pk": google_book_id})
             )
@@ -481,32 +590,101 @@ class RequestsToUserAll(LoginRequiredMixin, ListView):
 
         return context
 
-    def _get_requests_by_status(self, user, role_field):
-        """DRY helper to get requests by status (open/accept/reject).
+    def _group_requests_by_book(self, user, role_field):
+        """Group all requests by book with detailed metadata.
 
         Args:
             user: The user to filter by
             role_field: Either "owner" or "requester"
 
         Returns:
-            Dict with keys: requests_to_user_open, requests_to_user_accept, requests_to_user_reject
+            List of dicts, each containing:
+                - book: Book object
+                - requests: list of RequestBook objects for this book
+                - most_recent_action: datetime
+                - has_live_request: boolean (requests with no decision)
+                - has_active_loan: boolean (book currently loaned out)
+                - active_loan: Transaction object if exists
         """
-        result = {}
-        for status_key, filters in self.REQUEST_STATUS_FILTERS.items():
-            query_filters = {role_field: user, **filters}
-            result[f"requests_to_user_{status_key}"] = RequestBook.objects.filter(
-                **query_filters
-            ).order_by("-request_datetime")
-        return result
+        from collections import defaultdict
+
+        # Get ALL requests for the user (no status filtering)
+        query_filters = {role_field: user}
+        all_requests = RequestBook.objects.filter(**query_filters).select_related('book', 'owner', 'requester')
+
+        # Group requests by book
+        requests_by_book = defaultdict(list)
+        for request in all_requests:
+            requests_by_book[request.book].append(request)
+
+        # Build the data structure for each book
+        all_requests_by_book = []
+        for book, requests in requests_by_book.items():
+            # Calculate most recent action datetime and status counts
+            action_datetimes = []
+            has_live_request = False
+            open_count = 0
+            accepted_count = 0
+            rejected_count = 0
+
+            for req in requests:
+                # Add request datetime
+                action_datetimes.append(req.request_datetime)
+
+                # Add decision datetime if exists
+                if req.decision_datetime:
+                    action_datetimes.append(req.decision_datetime)
+
+                # Calculate status counts and check for live requests
+                if req.decision_datetime is None and req.cancelled_datetime is None:
+                    has_live_request = True
+                    open_count += 1
+                elif req.decision_datetime is not None:
+                    if req.decision:
+                        accepted_count += 1
+                    else:
+                        rejected_count += 1
+
+            most_recent_action = max(action_datetimes) if action_datetimes else None
+
+            # Check for active loan (returned_datetime is None)
+            active_loan = Transaction.objects.filter(
+                book=book,
+                returned_datetime__isnull=True
+            ).first()
+
+            has_active_loan = active_loan is not None
+
+            all_requests_by_book.append({
+                'book': book,
+                'requests': requests,
+                'most_recent_action': most_recent_action,
+                'has_live_request': has_live_request,
+                'has_active_loan': has_active_loan,
+                'active_loan': active_loan,
+                'open_count': open_count,
+                'accepted_count': accepted_count,
+                'rejected_count': rejected_count,
+            })
+
+        # Sort: live requests first, then by most recent action
+        all_requests_by_book.sort(
+            key=lambda x: (
+                not x['has_live_request'],  # False (live) comes before True (no live)
+                -(x['most_recent_action'].timestamp() if x['most_recent_action'] else 0)
+            )
+        )
+
+        return all_requests_by_book
 
     def get_requests_by_owner(self, user, context):
         """Books requested FROM the user. User IS the owner of the book and is giving them away"""
-        context.update(self._get_requests_by_status(user, "owner"))
+        context['all_requests_by_book'] = self._group_requests_by_book(user, "owner")
         return context
 
     def get_requests_by_requester(self, user, context):
         """Books requested BY the user. User is not the owner of the book and wants to borrow it"""
-        context.update(self._get_requests_by_status(user, "requester"))
+        context['all_requests_by_book'] = self._group_requests_by_book(user, "requester")
         return context
 
 
@@ -712,3 +890,51 @@ class RemoveFromWishlistView(LoginRequiredMixin, View):
 
         # Always redirect to the book detail page
         return redirect("single_book", pk=book_id)
+
+
+class EndLoanView(LoginRequiredMixin, View):
+    """Allow book owners to mark loans as returned"""
+
+    def post(self, request, *args, **kwargs):
+        transaction_id = request.POST.get("transaction_id")
+
+        if not transaction_id:
+            messages.error(request, "Invalid transaction")
+            return HttpResponseRedirect(reverse("requests_to_user_all") + "?filter_by=owner")
+
+        try:
+            transaction = Transaction.objects.get(pk=transaction_id)
+
+            # Verify the current user is the owner of the transaction
+            if transaction.owner != request.user:
+                logger.warning(
+                    "User %s attempted to end transaction %s belonging to %s",
+                    request.user.username,
+                    transaction_id,
+                    transaction.owner.username,
+                )
+                messages.error(request, "You can only end your own loans")
+                return HttpResponseRedirect(reverse("requests_to_user_all") + "?filter_by=owner")
+
+            # Verify the loan hasn't already been returned
+            if transaction.returned_datetime is not None:
+                messages.info(request, "This loan has already been completed")
+                return HttpResponseRedirect(reverse("requests_to_user_all") + "?filter_by=owner")
+
+            # Mark the loan as returned
+            transaction.returned_datetime = timezone.now()
+            transaction.save()
+
+            logger.info(
+                "User %s marked transaction %s as returned for book '%s'",
+                request.user.username,
+                transaction_id,
+                transaction.book.title,
+            )
+            messages.success(request, f"Loan completed! {transaction.book.title} has been returned.")
+
+        except Transaction.DoesNotExist:
+            logger.error("Transaction %s not found for ending loan", transaction_id)
+            messages.error(request, "Transaction not found")
+
+        return HttpResponseRedirect(reverse("requests_to_user_all") + "?filter_by=owner")

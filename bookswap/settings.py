@@ -170,8 +170,8 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 # Only run debug toolbar locally
 INTERNAL_IPS = ["127.0.0.1"]
 
-LOGIN_REDIRECT_URL = "loggedin"
-LOGOUT_REDIRECT_URL = "loggedout"
+LOGIN_REDIRECT_URL = "/"  # Temporary, will be handled by custom view
+LOGOUT_REDIRECT_URL = "index"
 
 # Production Security Settings
 if not DEBUG:

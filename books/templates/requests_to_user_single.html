@@ -2,79 +2,364 @@
 {% block body_block %}
 {% load static %}
 
-    <div class="container my-5">
-        <div class="p-3 text-center bg-body-tertiary rounded-3">
-            <h1 class="text-body-emphasis">Book Request</h1>
-            <p class="lead">{{ object.book.title }} </p>
+    <!-- Page Header with Gradient -->
+    <div class="page-header">
+        <h1>Book Request Decision</h1>
+        <p class="lead">Review and respond to this book request</p>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container" style="max-width: 1200px; margin: var(--space-2xl) auto; padding: 0 var(--space-lg);">
+
+        <div style="display: grid; grid-template-columns: 2fr 3fr; gap: var(--space-xl); align-items: start;">
+
+            <!-- Left Column: Book Information Card -->
+            <div style="background: var(--bg-elevated); border-radius: var(--radius-lg); padding: var(--space-xl); box-shadow: var(--shadow-lg); border: 1px solid var(--bg-secondary); position: sticky; top: var(--space-lg);">
+
+                <!-- Book Cover -->
+                <div style="margin-bottom: var(--space-lg);">
+                    {% if object.book.thumbnail %}
+                        <a href="{% url 'single_book' pk=object.book.pk %}" style="display: block;">
+                            <div style="border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-xl); transition: transform var(--transition-base); aspect-ratio: 2/3; background: var(--bg-tertiary);">
+                                <img src="{{ MEDIA_URL }}{{ object.book.thumbnail }}"
+                                     alt="{{ object.book.title }}"
+                                     style="width: 100%; height: 100%; object-fit: cover; transition: transform var(--transition-slow);"
+                                     onmouseover="this.style.transform='scale(1.05)'"
+                                     onmouseout="this.style.transform='scale(1)'">
+                            </div>
+                        </a>
+                    {% else %}
+                        <div style="border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-xl); aspect-ratio: 2/3; background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center; padding: var(--space-lg);">
+                            <img src="{% static 'generic_thumbnail.jpeg' %}"
+                                 alt='No Thumbnail found'
+                                 style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Book Title -->
+                <div style="margin-bottom: var(--space-lg);">
+                    <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600; margin-bottom: var(--space-xs);">
+                        Book Title
+                    </div>
+                    <a href="{% url 'single_book' pk=object.book.pk %}" style="color: var(--text-primary); text-decoration: none; font-size: 1.375rem; font-weight: 700; line-height: 1.3; display: block; transition: color var(--transition-fast);">
+                        {{ object.book.title }}
+                    </a>
+                </div>
+
+                <!-- Request Details -->
+                <div style="border-top: 1px solid var(--bg-tertiary); padding-top: var(--space-lg); margin-top: var(--space-lg);">
+                    <!-- Requester -->
+                    <div style="margin-bottom: var(--space-md);">
+                        <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600; margin-bottom: var(--space-xs);">
+                            Requested By
+                        </div>
+                        <a href="{% url 'user_account' pk=object.requester.pk %}" style="color: var(--bs-primary); text-decoration: none; font-weight: 600; font-size: 1.125rem; transition: opacity var(--transition-fast);">
+                            {{ object.requester }}
+                        </a>
+                    </div>
+
+                    <!-- Request Date -->
+                    <div>
+                        <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600; margin-bottom: var(--space-xs);">
+                            Request Date
+                        </div>
+                        <div style="color: var(--text-secondary); font-weight: 500;">
+                            {{ object.request_datetime|date:"M d, Y" }} at {{ object.request_datetime|time:"g:i A" }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Badge -->
+                <div style="margin-top: var(--space-lg);">
+                    <span style="display: inline-block; background: rgba(var(--bs-primary-rgb, 99, 102, 241), 0.15); color: var(--bs-primary); padding: var(--space-sm) var(--space-lg); border-radius: var(--radius-lg); font-size: 0.875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
+                        Awaiting Your Decision
+                    </span>
+                </div>
+            </div>
+
+            <!-- Right Column: Decision Form Card -->
+            <div>
+                <form id="submitForm" method="post" action="">
+                    {% csrf_token %}
+                    <input type="hidden" name="decision" id="decisionInput" value="">
+                    <input type="hidden" name="owner" id="ownerInput" value="{{ object.owner.pk }}">
+                    <input type="hidden" name="requester" id="requesterInput" value="{{ object.requester.pk }}">
+                    <input type="hidden" name="google_book_id" id="googleBookIdInput" value="{{ object.book.google_book_id }}">
+                    <input type="hidden" name="request_datetime" id="request_datetime" value="{{ object.request_datetime|date:'Y-m-d\TH:i:s' }}">
+                    <input type="hidden" name="reject_reason" id="rejectReasonInput">
+
+                    <!-- Decision Options Title -->
+                    <div style="margin-bottom: var(--space-lg);">
+                        <h2 style="color: var(--text-primary); font-size: 1.75rem; font-weight: 700; margin-bottom: var(--space-sm);">
+                            Make Your Decision
+                        </h2>
+                        <p style="color: var(--text-muted); margin: 0;">
+                            Choose to approve or reject this book request
+                        </p>
+                    </div>
+
+                    <!-- Decision Options -->
+                    <div style="display: grid; gap: var(--space-md); margin-bottom: var(--space-xl);">
+
+                        <!-- Approve Option -->
+                        <label for="flexRadioApprove" style="cursor: pointer;">
+                            <input class="form-check-input" type="radio" name="flexRadioDefault" id="flexRadioApprove" style="display: none;">
+                            <div class="decision-card" id="approveCard" style="background: var(--bg-elevated); border: 2px solid var(--bg-tertiary); border-radius: var(--radius-lg); padding: var(--space-xl); transition: all var(--transition-base); position: relative; overflow: hidden;">
+                                <!-- Background gradient effect when selected -->
+                                <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(16, 185, 129, 0.02) 100%); opacity: 0; transition: opacity var(--transition-base); pointer-events: none;" id="approveGradient"></div>
+
+                                <div style="position: relative; z-index: 1; display: grid; grid-template-columns: auto 1fr auto; gap: var(--space-lg); align-items: center;">
+                                    <!-- Checkmark Icon -->
+                                    <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center; transition: all var(--transition-base);" id="approveIcon">
+                                        <span style="font-size: 1.5rem; color: var(--bs-success);">✓</span>
+                                    </div>
+
+                                    <!-- Text Content -->
+                                    <div>
+                                        <div style="font-size: 1.375rem; font-weight: 700; color: var(--text-primary); margin-bottom: var(--space-xs);">
+                                            Approve Request
+                                        </div>
+                                        <div style="color: var(--text-muted); font-size: 0.9375rem;">
+                                            Accept this request and allow the user to borrow your book
+                                        </div>
+                                    </div>
+
+                                    <!-- Selection Indicator -->
+                                    <div style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--bg-tertiary); background: var(--bg-secondary); display: flex; align-items: center; justify-content: center; transition: all var(--transition-base);" id="approveRadio">
+                                        <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--bs-success); transform: scale(0); transition: transform var(--transition-base);" id="approveRadioInner"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </label>
+
+                        <!-- Reject Option -->
+                        <label for="flexRadioReject" style="cursor: pointer;">
+                            <input class="form-check-input" type="radio" name="flexRadioDefault" id="flexRadioReject" style="display: none;">
+                            <div class="decision-card" id="rejectCard" style="background: var(--bg-elevated); border: 2px solid var(--bg-tertiary); border-radius: var(--radius-lg); padding: var(--space-xl); transition: all var(--transition-base); position: relative; overflow: hidden;">
+                                <!-- Background gradient effect when selected -->
+                                <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, rgba(239, 68, 68, 0.02) 100%); opacity: 0; transition: opacity var(--transition-base); pointer-events: none;" id="rejectGradient"></div>
+
+                                <div style="position: relative; z-index: 1; display: grid; grid-template-columns: auto 1fr auto; gap: var(--space-lg); align-items: center;">
+                                    <!-- X Icon -->
+                                    <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); display: flex; align-items: center; justify-content: center; transition: all var(--transition-base);" id="rejectIcon">
+                                        <span style="font-size: 1.5rem; color: var(--bs-danger);">✗</span>
+                                    </div>
+
+                                    <!-- Text Content -->
+                                    <div>
+                                        <div style="font-size: 1.375rem; font-weight: 700; color: var(--text-primary); margin-bottom: var(--space-xs);">
+                                            Reject Request
+                                        </div>
+                                        <div style="color: var(--text-muted); font-size: 0.9375rem;">
+                                            Decline this request with an optional reason
+                                        </div>
+                                    </div>
+
+                                    <!-- Selection Indicator -->
+                                    <div style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--bg-tertiary); background: var(--bg-secondary); display: flex; align-items: center; justify-content: center; transition: all var(--transition-base);" id="rejectRadio">
+                                        <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--bs-danger); transform: scale(0); transition: transform var(--transition-base);" id="rejectRadioInner"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Rejection Reason Dropdown (Hidden by default) -->
+                    <div id="rejectReasonDropdown" style="display: none; margin-bottom: var(--space-xl); opacity: 0; transform: translateY(-10px); transition: all var(--transition-base);">
+                        <div style="background: var(--bg-elevated); border-radius: var(--radius-lg); padding: var(--space-lg); border: 2px solid rgba(239, 68, 68, 0.3);">
+                            <label for="rejectReason" class="form-label" style="color: var(--text-primary); font-weight: 600; margin-bottom: var(--space-md); display: block; font-size: 1rem;">
+                                Select a reason for rejection:
+                            </label>
+                            <select class="form-select" id="rejectReason" name="rejectReason" style="background-color: var(--bg-secondary); border: 1px solid var(--bg-tertiary); color: var(--text-primary); border-radius: var(--radius-md); padding: var(--space-md); font-size: 1rem; width: 100%;">
+                                {% for choice in object.REJECT_REASON_CHOICES %}
+                                    <option value="{{ choice.0 }}">{{ choice.1 }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--space-md); margin-top: var(--space-xl);">
+                        <button type="submit" class="btn btn-primary" style="padding: var(--space-lg) var(--space-xl); font-size: 1.125rem; font-weight: 700; border-radius: var(--radius-md); transition: all var(--transition-base); text-transform: uppercase; letter-spacing: 0.05em;">
+                            Submit Decision
+                        </button>
+                        <a href="{% url 'requests_to_user_all' %}?filter_by=owner" class="btn" style="background-color: var(--bg-secondary); color: var(--text-primary); border: 2px solid var(--bg-tertiary); padding: var(--space-lg) var(--space-xl); font-weight: 600; text-decoration: none; border-radius: var(--radius-md); transition: all var(--transition-base); display: flex; align-items: center; justify-content: center; text-align: center;">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-    <p>{{object}} on {{object.request_datetime}}</p>
-    {% if object.book.thumbnail %}
-        <a href="{% url 'single_book' pk=object.book.pk %}"><img src="{{ MEDIA_URL }}{{ object.book.thumbnail }}" alt="{{ object.book.title }}"></a>
-    {% else %}
-        <!-- Placeholder image or alternative content if thumbnail is not available -->
-        <img src="{% static 'generic_thumbnail.jpeg' %}" alt='No Thumbnail found'>
-    {% endif %}
-    <br><br>
-    <form id="submitForm" method="post" action="">
-        {% csrf_token %}
-        <input type="hidden" name="decision" id="decisionInput" value="">
-        <input type="hidden" name="owner" id="ownerInput" value="{{ object.owner.pk }}">
-        <input type="hidden" name="requester" id="requesterInput" value="{{ object.requester.pk }}">
-        <input type="hidden" name="google_book_id" id="googleBookIdInput" value="{{ object.book.google_book_id }}">
-        <input type="hidden" name="request_datetime" id="request_datetime" value="{{ object.request_datetime|date:'Y-m-d\TH:i:s' }}">
-        <input type="hidden" name="reject_reason" id="rejectReasonInput">
-        <div class="form-check">
-            <input class="form-check-input" type="radio" name="flexRadioDefault" id="flexRadioApprove">
-            <label class="form-check-label" for="flexRadioApprove">
-                Approve
-            </label>
-        </div>
-        <div class="form-check">
-            <input class="form-check-input" type="radio" name="flexRadioDefault" id="flexRadioReject">
-            <label class="form-check-label" for="flexRadioReject">
-                Reject
-            </label>
-        </div>
-        <br>
 
-        <div id="rejectReasonDropdown" style="display: none;">
-            <label for="rejectReason" class="form-label mb-0"><i>Select rejection reason:</i></label>
-            <select class="form-select mt-3" id="rejectReason" name="rejectReason">
-                {% for choice in object.REJECT_REASON_CHOICES %}
-                    <option value="{{ choice.0 }}">{{ choice.1 }}</option>
-                {% endfor %}
-            </select>
-        </div>
+    <!-- Enhanced JavaScript for Interactive Decision Cards -->
+    <script>
+        // Get elements
+        const approveRadio = document.getElementById('flexRadioApprove');
+        const rejectRadio = document.getElementById('flexRadioReject');
+        const approveCard = document.getElementById('approveCard');
+        const rejectCard = document.getElementById('rejectCard');
+        const rejectReasonDropdown = document.getElementById('rejectReasonDropdown');
+        const decisionInput = document.getElementById('decisionInput');
+        const rejectReasonInput = document.getElementById('rejectReasonInput');
+        const rejectReasonSelect = document.getElementById('rejectReason');
 
-        <script>
-            document.querySelectorAll('input[name="flexRadioDefault"]').forEach(function(radio) {
-                radio.addEventListener("change", function() {
-                    if (this.id === "flexRadioReject" && this.checked) {
-                        document.getElementById("decisionInput").value = "Reject";
-                        document.getElementById("rejectReasonDropdown").style.display = "block";
-                        // Update rejectReasonInput value when reject button is pressed
-                        var selectedRejectReason = document.getElementById("rejectReason").value;
-                        document.getElementById("rejectReasonInput").value = selectedRejectReason;
-                    } else {
-                        document.getElementById("decisionInput").value = "Approve";
-                        document.getElementById("rejectReasonDropdown").style.display = "none";
-                        // Reset rejectReasonInput value when approve button is pressed
-                        document.getElementById("rejectReasonInput").value = "";
-                    }
-                    document.getElementById("submitForm").action = "{% url 'request_decision' %}";
-                });
+        // Function to reset all cards
+        function resetCards() {
+            // Reset approve card
+            approveCard.style.borderColor = 'var(--bg-tertiary)';
+            approveCard.style.boxShadow = 'none';
+            document.getElementById('approveGradient').style.opacity = '0';
+            document.getElementById('approveIcon').style.background = 'rgba(16, 185, 129, 0.15)';
+            document.getElementById('approveRadio').style.borderColor = 'var(--bg-tertiary)';
+            document.getElementById('approveRadioInner').style.transform = 'scale(0)';
+
+            // Reset reject card
+            rejectCard.style.borderColor = 'var(--bg-tertiary)';
+            rejectCard.style.boxShadow = 'none';
+            document.getElementById('rejectGradient').style.opacity = '0';
+            document.getElementById('rejectIcon').style.background = 'rgba(239, 68, 68, 0.15)';
+            document.getElementById('rejectRadio').style.borderColor = 'var(--bg-tertiary)';
+            document.getElementById('rejectRadioInner').style.transform = 'scale(0)';
+        }
+
+        // Function to activate approve card
+        function activateApprove() {
+            resetCards();
+            approveCard.style.borderColor = 'var(--bs-success)';
+            approveCard.style.boxShadow = '0 8px 24px -4px rgba(16, 185, 129, 0.25)';
+            document.getElementById('approveGradient').style.opacity = '1';
+            document.getElementById('approveIcon').style.background = 'rgba(16, 185, 129, 0.3)';
+            document.getElementById('approveRadio').style.borderColor = 'var(--bs-success)';
+            document.getElementById('approveRadioInner').style.transform = 'scale(1)';
+        }
+
+        // Function to activate reject card
+        function activateReject() {
+            resetCards();
+            rejectCard.style.borderColor = 'var(--bs-danger)';
+            rejectCard.style.boxShadow = '0 8px 24px -4px rgba(239, 68, 68, 0.25)';
+            document.getElementById('rejectGradient').style.opacity = '1';
+            document.getElementById('rejectIcon').style.background = 'rgba(239, 68, 68, 0.3)';
+            document.getElementById('rejectRadio').style.borderColor = 'var(--bs-danger)';
+            document.getElementById('rejectRadioInner').style.transform = 'scale(1)';
+        }
+
+        // Hover effects
+        approveCard.addEventListener('mouseenter', function() {
+            if (!approveRadio.checked) {
+                this.style.borderColor = 'rgba(16, 185, 129, 0.5)';
+                this.style.transform = 'translateY(-2px)';
+            }
+        });
+
+        approveCard.addEventListener('mouseleave', function() {
+            if (!approveRadio.checked) {
+                this.style.borderColor = 'var(--bg-tertiary)';
+                this.style.transform = 'translateY(0)';
+            }
+        });
+
+        rejectCard.addEventListener('mouseenter', function() {
+            if (!rejectRadio.checked) {
+                this.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+                this.style.transform = 'translateY(-2px)';
+            }
+        });
+
+        rejectCard.addEventListener('mouseleave', function() {
+            if (!rejectRadio.checked) {
+                this.style.borderColor = 'var(--bg-tertiary)';
+                this.style.transform = 'translateY(0)';
+            }
+        });
+
+        // Radio button change listeners
+        document.querySelectorAll('input[name="flexRadioDefault"]').forEach(function(radio) {
+            radio.addEventListener("change", function() {
+                if (this.id === "flexRadioReject" && this.checked) {
+                    activateReject();
+                    decisionInput.value = "Reject";
+
+                    // Show rejection reason dropdown with animation
+                    rejectReasonDropdown.style.display = "block";
+                    setTimeout(function() {
+                        rejectReasonDropdown.style.opacity = "1";
+                        rejectReasonDropdown.style.transform = "translateY(0)";
+                    }, 10);
+
+                    // Update rejectReasonInput value
+                    var selectedRejectReason = rejectReasonSelect.value;
+                    rejectReasonInput.value = selectedRejectReason;
+                } else {
+                    activateApprove();
+                    decisionInput.value = "Approve";
+
+                    // Hide rejection reason dropdown with animation
+                    rejectReasonDropdown.style.opacity = "0";
+                    rejectReasonDropdown.style.transform = "translateY(-10px)";
+                    setTimeout(function() {
+                        rejectReasonDropdown.style.display = "none";
+                    }, 250);
+
+                    // Reset rejectReasonInput value
+                    rejectReasonInput.value = "";
+                }
+                document.getElementById("submitForm").action = "{% url 'request_decision' %}";
             });
-            // Add event listener for dropdown change event
-            document.getElementById("rejectReason").addEventListener("change", function() {
-                // Update rejectReasonInput value when dropdown selection changes
-                var selectedRejectReason = this.value;
-                document.getElementById("rejectReasonInput").value = selectedRejectReason;
-            });
-        </script>
-        <br>
-        <p></p>
-        <button type="submit" class="btn btn-sm btn-primary">Submit</button>
-        <a href="{% url 'requests_to_user_all' %}?filter_by=owner" class="btn btn-sm btn-default">Cancel</a>
-    </form>
+        });
+
+        // Dropdown change event listener
+        rejectReasonSelect.addEventListener("change", function() {
+            var selectedRejectReason = this.value;
+            rejectReasonInput.value = selectedRejectReason;
+        });
+
+        // Click on card to select radio
+        approveCard.addEventListener('click', function() {
+            approveRadio.checked = true;
+            approveRadio.dispatchEvent(new Event('change'));
+        });
+
+        rejectCard.addEventListener('click', function() {
+            rejectRadio.checked = true;
+            rejectRadio.dispatchEvent(new Event('change'));
+        });
+    </script>
+
+    <!-- Responsive Design for Mobile -->
+    <style>
+        @media (max-width: 968px) {
+            .container > div[style*="grid-template-columns: 2fr 3fr"] {
+                grid-template-columns: 1fr !important;
+            }
+
+            .container > div > div[style*="position: sticky"] {
+                position: static !important;
+            }
+        }
+
+        @media (max-width: 640px) {
+            div[style*="grid-template-columns: 2fr 1fr"] {
+                grid-template-columns: 1fr !important;
+            }
+
+            .decision-card > div > div[style*="grid-template-columns: auto 1fr auto"] {
+                grid-template-columns: auto 1fr !important;
+            }
+
+            .decision-card > div > div > div:last-child {
+                display: none !important;
+            }
+        }
+
+        /* Smooth transitions for form select */
+        select:focus {
+            outline: none;
+            border-color: var(--bs-primary) !important;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+        }
+    </style>
+
 {% endblock %}

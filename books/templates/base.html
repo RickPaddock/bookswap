@@ -46,6 +46,26 @@
                 </div>
             </div>
         </nav>
+
+        <!-- Toast Notifications -->
+        {% if messages %}
+        <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999; margin-top: 80px;">
+            {% for message in messages %}
+            <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="5000">
+                <div class="toast-header {% if message.tags == 'success' %}bg-success{% elif message.tags == 'error' %}bg-danger{% elif message.tags == 'warning' %}bg-warning{% else %}bg-info{% endif %} text-white">
+                    <strong class="me-auto">
+                        {% if message.tags == 'success' %}✓ Success{% elif message.tags == 'error' %}✗ Error{% elif message.tags == 'warning' %}⚠ Warning{% else %}ℹ Info{% endif %}
+                    </strong>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body">
+                    {{ message }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         <div class="container" style="max-width: 1200px;">
             {% block body_block %}
             <!-- Anything outside of this will be inherited if extended! -->

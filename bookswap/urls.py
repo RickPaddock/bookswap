@@ -19,8 +19,8 @@ from django.conf import settings  # Required for debug toolbar
 from django.urls import path, include
 from books.views import (
     index,
-    LoggedInPage,
-    LoggedOutPage,
+    CustomLoginView,
+    CustomLogoutView,
     SignUp,
     CreateGroup,
     JoinGroup,
@@ -42,20 +42,14 @@ from books.views import (
     CancelRequestView,
     RemoveBookFromLibraryView,
     RemoveFromWishlistView,
+    EndLoanView,
 )
-
-# Django provides login and logout views so we dont create them in views.py
-from django.contrib.auth import views as auth_views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", index, name="index"),
-    path(
-        "login", auth_views.LoginView.as_view(template_name="login.html"), name="login"
-    ),
-    path("logout", auth_views.LogoutView.as_view(), name="logout"),
-    path("loggedin", LoggedInPage.as_view(), name="loggedin"),
-    path("loggedout", LoggedOutPage.as_view(), name="loggedout"),
+    path("login", CustomLoginView.as_view(), name="login"),
+    path("logout", CustomLogoutView.as_view(), name="logout"),
     path("signup", SignUp.as_view(), name="signup"),
     path("create_group", CreateGroup.as_view(), name="create_group"),
     path("join_group/<slug>/", JoinGroup.as_view(), name="join_group"),
@@ -113,6 +107,11 @@ urlpatterns = [
         "remove_from_wishlist/",
         RemoveFromWishlistView.as_view(),
         name="remove_from_wishlist",
+    ),
+    path(
+        "end_loan/",
+        EndLoanView.as_view(),
+        name="end_loan",
     ),
 ]
 

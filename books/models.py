@@ -22,15 +22,44 @@ class CustomUser(AbstractUser):
 
 
 class Book(models.Model):
-    google_book_id = models.CharField(max_length=25, primary_key=True)
-    ID_ISBN_13 = models.CharField(max_length=13, null=True, unique=True)
-    ID_ISBN_10 = models.CharField(max_length=10, null=True, unique=True)
-    ID_OTHER = models.CharField(max_length=25, null=True, unique=True)
-    title = models.CharField(max_length=100, blank=False)
-    authors = models.CharField(max_length=100, blank=True)
-    thumbnail = models.CharField(max_length=600, null=True, blank=True)
-    description = models.TextField(blank=True)
-    pagecount = models.CharField(max_length=7, null=True, blank=True)
+    # Primary identifiers from Google Books API
+    google_book_id = models.CharField(max_length=25, primary_key=True)  # volumeInfo.id
+    ID_ISBN_13 = models.CharField(max_length=13, null=True, unique=True)  # industryIdentifiers[].identifier (ISBN_13)
+    ID_ISBN_10 = models.CharField(max_length=10, null=True, unique=True)  # industryIdentifiers[].identifier (ISBN_10)
+    ID_OTHER = models.CharField(max_length=25, null=True, unique=True)  # industryIdentifiers[].identifier (OTHER)
+
+    # Core book information
+    title = models.CharField(max_length=100, blank=False)  # volumeInfo.title
+    authors = models.CharField(max_length=100, blank=True)  # volumeInfo.authors (joined)
+    thumbnail = models.CharField(max_length=600, null=True, blank=True)  # volumeInfo.imageLinks.thumbnail
+    description = models.TextField(blank=True)  # volumeInfo.description
+    pagecount = models.CharField(max_length=7, null=True, blank=True)  # volumeInfo.pageCount
+
+    # Additional Google Books API fields
+    # Date information - Google returns varying formats (YYYY, YYYY-MM, or YYYY-MM-DD)
+    published_date = models.CharField(max_length=50, null=True, blank=True)  # volumeInfo.publishedDate
+
+    # Language (ISO 639-1 code, e.g., 'en', 'es', 'fr')
+    language = models.CharField(max_length=10, default='en', blank=True)  # volumeInfo.language
+
+    # Categories/Genres (comma-separated from Google Books)
+    categories = models.TextField(blank=True)  # volumeInfo.categories (joined with commas)
+
+    # Publisher information
+    publisher = models.CharField(max_length=255, blank=True)  # volumeInfo.publisher
+
+    # Rating information from Google Books users
+    average_rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)  # volumeInfo.averageRating (e.g., 4.5)
+    ratings_count = models.PositiveIntegerField(null=True, blank=True)  # volumeInfo.ratingsCount
+
+    # Google Books links
+    preview_link = models.URLField(max_length=500, blank=True)  # volumeInfo.previewLink
+    info_link = models.URLField(max_length=500, blank=True)  # volumeInfo.infoLink
+
+    # Maturity rating (e.g., "NOT_MATURE" or "MATURE")
+    maturity_rating = models.CharField(max_length=20, blank=True)  # volumeInfo.maturityRating
+
+    # Relationship to users
     owner = models.ManyToManyField(CustomUser, through="UserBook")
 
     def __str__(self):

@@ -1,110 +1,550 @@
 {% extends "base.html" %}
 {% block body_block %}
 {% load static %}
+{% load book_extras %}
 
-    <div class="page-header">
-        <h1>{{book.title}}</h1>
-        <p class="lead" style="margin-bottom: var(--space-lg);">by {{ book.authors }}</p>
-        {% if user.is_authenticated %}
-            <div style="margin-top: var(--space-lg); display: flex; gap: var(--space-md); justify-content: center; flex-wrap: wrap;">
-                <!-- Library Button -->
-                {% if is_owner %}
-                    <form method="post" action="{% url 'remove_book' %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="book_id" value="{{ book.pk }}">
-                        <input type="hidden" name="redirect_url" value="single_book">
-                        <button type="submit" class="btn" style="background-color: var(--bs-danger); color: white; border: none; min-width: 180px;" onclick="return confirm('Remove this book from your library?')">Remove from Library</button>
-                    </form>
-                {% else %}
-                    <form method="post" action="{% url 'add_to_library' %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="add_to_library">
-                        <input type="hidden" name="id_google" value="{{ book.google_book_id }}">
-                        <input type="hidden" name="title" value="{{ book.title }}">
-                        <input type="hidden" name="authors" value="{{ book.authors }}">
-                        <input type="hidden" name="thumbnail" value="{{ book.thumbnail }}">
-                        <input type="hidden" name="description" value="{{ book.description }}">
-                        <input type="hidden" name="pageCount" value="{{ book.pageCount }}">
-                        <input type="hidden" name="ID_ISBN_13" value="{{ book.ID_ISBN_13 }}">
-                        <input type="hidden" name="ID_ISBN_10" value="{{ book.ID_ISBN_10 }}">
-                        <input type="hidden" name="ID_OTHER" value="{{ book.ID_OTHER }}">
-                        <button type="submit" class="btn btn-primary" style="min-width: 180px;">Add to Library</button>
-                    </form>
-                {% endif %}
+<style>
+    /* Collapsible sections for owners/wishers */
+    .community-collapse {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out;
+    }
 
-                <!-- Wishlist Button -->
-                {% if is_wished %}
-                    <form method="post" action="{% url 'remove_from_wishlist' %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="book_id" value="{{ book.pk }}">
-                        <button type="submit" class="btn" style="background-color: var(--bs-secondary); color: white; border: none; min-width: 180px;">Remove from Wishlist</button>
-                    </form>
-                {% else %}
-                    <form method="post" action="{% url 'add_to_library' %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="add_to_wishlist">
-                        <input type="hidden" name="id_google" value="{{ book.google_book_id }}">
-                        <input type="hidden" name="title" value="{{ book.title }}">
-                        <input type="hidden" name="authors" value="{{ book.authors }}">
-                        <input type="hidden" name="thumbnail" value="{{ book.thumbnail }}">
-                        <input type="hidden" name="description" value="{{ book.description }}">
-                        <input type="hidden" name="pageCount" value="{{ book.pageCount }}">
-                        <button type="submit" class="btn" style="background-color: var(--bs-secondary); color: white; border: none; min-width: 180px;">Add to Wishlist</button>
-                    </form>
-                {% endif %}
+    .community-collapse.active {
+        max-height: 2000px;
+        transition: max-height 0.5s ease-in;
+    }
+
+    .toggle-btn {
+        cursor: pointer;
+        user-select: none;
+        transition: all 0.2s ease;
+    }
+
+    .toggle-btn:hover {
+        opacity: 0.8;
+    }
+
+    .toggle-icon {
+        display: inline-block;
+        transition: transform 0.3s ease;
+        margin-left: var(--space-sm);
+    }
+
+    .toggle-icon.rotated {
+        transform: rotate(180deg);
+    }
+
+    .hero-section {
+        background: linear-gradient(135deg, var(--bg-elevated) 0%, var(--bg-secondary) 100%);
+        border-radius: var(--radius-lg);
+        padding: var(--space-2xl);
+        margin-bottom: var(--space-2xl);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .book-cover-hero {
+        max-width: 200px;
+        width: 100%;
+        height: auto;
+        border-radius: var(--radius-md);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    }
+
+    .stat-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-xs);
+        background: var(--bg-tertiary);
+        padding: var(--space-sm) var(--space-md);
+        border-radius: var(--radius-md);
+        font-weight: 500;
+        color: var(--text-primary);
+        margin-right: var(--space-sm);
+        margin-bottom: var(--space-sm);
+    }
+
+    .stat-number {
+        background: var(--primary-color);
+        color: white;
+        padding: var(--space-xs) var(--space-sm);
+        border-radius: var(--radius-sm);
+        font-weight: 600;
+        min-width: 24px;
+        text-align: center;
+    }
+
+    /* NEW: Hero container with status on the right */
+    .hero-content-wrapper {
+        display: flex;
+        gap: var(--space-xl);
+        align-items: flex-start;
+    }
+
+    .hero-left {
+        flex: 1;
+        min-width: 0; /* Allows flex item to shrink below content size */
+    }
+
+    .hero-right {
+        flex-shrink: 0;
+        min-width: 280px;
+        max-width: 320px;
+    }
+
+    /* Status labels - text-like, not button-like */
+    .status-label {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-sm);
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        margin-bottom: var(--space-sm);
+        padding: var(--space-xs) 0;
+    }
+
+    .status-label .icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+
+    .status-label.in-library {
+        color: #28a745;
+    }
+
+    .status-label.in-wishlist {
+        color: #ffc107;
+    }
+
+    .status-label.not-in-collection {
+        color: var(--text-muted);
+    }
+
+    /* Status row: label + action button side by side */
+    .status-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-md);
+        margin-bottom: var(--space-md);
+        padding: var(--space-sm) 0;
+    }
+
+    .status-row:last-child {
+        margin-bottom: 0;
+    }
+
+    /* Action buttons */
+    .action-btn {
+        flex-shrink: 0;
+        padding: var(--space-sm) var(--space-lg);
+        border-radius: var(--radius-md);
+        font-weight: 600;
+        font-size: 0.875rem;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+    .action-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .action-btn:active {
+        transform: translateY(0);
+    }
+
+    .action-btn.btn-add {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .action-btn.btn-remove {
+        background: var(--bs-danger);
+        color: white;
+    }
+
+    .action-btn.btn-secondary-action {
+        background: var(--bs-secondary);
+        color: white;
+    }
+
+    /* Status container */
+    .status-container {
+        background: var(--bg-elevated);
+        border-radius: var(--radius-lg);
+        padding: var(--space-lg);
+        box-shadow: var(--shadow-md);
+        border: 2px solid var(--bg-tertiary);
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 992px) {
+        .hero-content-wrapper {
+            flex-direction: column;
+        }
+
+        .hero-right {
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .status-row {
+            flex-direction: column;
+            align-items: stretch;
+            gap: var(--space-sm);
+        }
+
+        .status-label {
+            justify-content: center;
+        }
+
+        .action-btn {
+            width: 100%;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .hero-section {
+            padding: var(--space-lg);
+        }
+
+        .book-cover-hero {
+            max-width: 150px;
+        }
+    }
+</style>
+
+<!-- Hero Section: Book Cover + Title + Status/Actions -->
+<div class="container" style="max-width: 1200px; margin: var(--space-2xl) auto; padding: 0 var(--space-lg);">
+    <div class="hero-section">
+        <div class="hero-content-wrapper">
+            <!-- LEFT: Book info and stats -->
+            <div class="hero-left">
+                <div class="row align-items-center">
+                    <!-- Book Cover -->
+                    <div class="col-md-3 text-center" style="margin-bottom: var(--space-lg);">
+                        {% if book.thumbnail %}
+                            <img src="{{ MEDIA_URL }}{{ book.thumbnail }}" alt="{{ book.title }}" class="book-cover-hero">
+                        {% else %}
+                            <img src="{% static 'generic_thumbnail.jpeg' %}" alt='No Thumbnail found' class="book-cover-hero">
+                        {% endif %}
+                    </div>
+
+                    <!-- Title, Author, and Community Stats -->
+                    <div class="col-md-9" style="margin-bottom: var(--space-lg);">
+                        <h1 style="color: var(--text-primary); margin-bottom: var(--space-md); font-size: 2rem; font-weight: 700;">{{book.title}}</h1>
+                        <p style="color: var(--text-secondary); font-size: 1.25rem; margin-bottom: var(--space-lg);">by {{ book.authors }}</p>
+
+                        <!-- Community Stats Badges -->
+                        <div style="margin-bottom: 0;">
+                            <div class="stat-badge toggle-btn" onclick="toggleSection('owners-section', 'owners-icon')">
+                                <span>📚 Owners</span>
+                                <span class="stat-number">{{book.owner.count}}</span>
+                                <span class="toggle-icon" id="owners-icon">▼</span>
+                            </div>
+
+                            <div class="stat-badge toggle-btn" onclick="toggleSection('wishers-section', 'wishers-icon')">
+                                <span>⭐ Wishers</span>
+                                <span class="stat-number">{{user_wish_count}}</span>
+                                <span class="toggle-icon" id="wishers-icon">▼</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        {% endif %}
+
+            <!-- RIGHT: Status and Actions -->
+            {% if user.is_authenticated %}
+            <div class="hero-right">
+                <div class="status-container">
+                    <!-- Library Status + Action -->
+                    <div class="status-row">
+                        {% if is_owner %}
+                            <div class="status-label in-library">
+                                <span class="icon">✓</span>
+                                <span>In Your Library</span>
+                            </div>
+                            <form method="post" action="{% url 'remove_book' %}" style="margin: 0;">
+                                {% csrf_token %}
+                                <input type="hidden" name="book_id" value="{{ book.pk }}">
+                                <input type="hidden" name="redirect_url" value="single_book">
+                                <button type="submit" class="action-btn btn-remove" onclick="return confirm('Remove this book from your library?')">Remove</button>
+                            </form>
+                        {% else %}
+                            <div class="status-label not-in-collection">
+                                <span class="icon">○</span>
+                                <span>Not in Library</span>
+                            </div>
+                            <form method="post" action="{% url 'add_to_library' %}" style="margin: 0;">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="add_to_library">
+                                <input type="hidden" name="id_google" value="{{ book.google_book_id }}">
+                                <input type="hidden" name="title" value="{{ book.title }}">
+                                <input type="hidden" name="authors" value="{{ book.authors }}">
+                                <input type="hidden" name="thumbnail" value="{{ book.thumbnail }}">
+                                <input type="hidden" name="description" value="{{ book.description }}">
+                                <input type="hidden" name="pageCount" value="{{ book.pageCount }}">
+                                <input type="hidden" name="ID_ISBN_13" value="{{ book.ID_ISBN_13 }}">
+                                <input type="hidden" name="ID_ISBN_10" value="{{ book.ID_ISBN_10 }}">
+                                <input type="hidden" name="ID_OTHER" value="{{ book.ID_OTHER }}">
+                                <button type="submit" class="action-btn btn-add">Add to Library</button>
+                            </form>
+                        {% endif %}
+                    </div>
+
+                    <!-- Divider -->
+                    <div style="height: 1px; background: var(--bg-tertiary); margin: var(--space-md) 0;"></div>
+
+                    <!-- Wishlist Status + Action -->
+                    <div class="status-row">
+                        {% if is_wished %}
+                            <div class="status-label in-wishlist">
+                                <span class="icon">⭐</span>
+                                <span>On Your Wishlist</span>
+                            </div>
+                            <form method="post" action="{% url 'remove_from_wishlist' %}" style="margin: 0;">
+                                {% csrf_token %}
+                                <input type="hidden" name="book_id" value="{{ book.pk }}">
+                                <button type="submit" class="action-btn btn-secondary-action">Remove</button>
+                            </form>
+                        {% else %}
+                            <div class="status-label not-in-collection">
+                                <span class="icon">☆</span>
+                                <span>Not on Wishlist</span>
+                            </div>
+                            <form method="post" action="{% url 'add_to_library' %}" style="margin: 0;">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="add_to_wishlist">
+                                <input type="hidden" name="id_google" value="{{ book.google_book_id }}">
+                                <input type="hidden" name="title" value="{{ book.title }}">
+                                <input type="hidden" name="authors" value="{{ book.authors }}">
+                                <input type="hidden" name="thumbnail" value="{{ book.thumbnail }}">
+                                <input type="hidden" name="description" value="{{ book.description }}">
+                                <input type="hidden" name="pageCount" value="{{ book.pageCount }}">
+                                <button type="submit" class="action-btn btn-add">Add to Wishlist</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="hero-right">
+                <div class="status-container">
+                    <p style="color: var(--text-muted); font-style: italic; margin: 0; text-align: center; font-size: 0.95rem; line-height: 1.6;">
+                        <strong>Log in</strong> to add this book to your library or wishlist
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
     </div>
-        <br>
-        <div class="row">
-            <div class="col">
-                <ul>
-                    {% if book.thumbnail %}
-                        <img src="{{ MEDIA_URL }}{{ book.thumbnail }}" alt="{{ book.title }}">
-                    {% else %}
-                        <!-- Placeholder image or alternative content if thumbnail is not available -->
-                        <img src="{% static 'generic_thumbnail.jpeg' %}" alt='No Thumbnail found'>
-                    {% endif %}
-                    <li>Authors: {{book.authors}}</li>
-                    <li>Page Count: {{book.pagecount}}</li>
-                    <br>
-                    <li>Description: {{book.description}}</li>
-                </ul>
-            </div>
-            <div class="col">
-                <p>{{book.owner.count}} owner{{book.owner.count|pluralize}}:</p>
-                <ol>
+
+    <!-- Collapsible Owners Section -->
+    <div id="owners-section" class="community-collapse" style="margin-bottom: var(--space-lg);">
+        <div style="background: var(--bg-elevated); border-radius: var(--radius-lg); padding: var(--space-xl); box-shadow: var(--shadow-md);">
+            <h3 style="color: var(--text-primary); margin-bottom: var(--space-lg); font-size: 1.25rem; font-weight: 600;">
+                📚 Book Owners
+            </h3>
+            {% if owners %}
+                <div style="display: grid; gap: var(--space-sm);">
                     {% for owner in owners %}
-                        <li>
-                            <a href="{% url 'user_account' pk=owner.user.pk %}">{{ owner.user.username }}</a>
-                            <!-- Only possible to request book if the logged in user does not already own it -->
+                        <div style="padding: var(--space-md); background: var(--bg-secondary); border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; transition: var(--transition-base);">
+                            <a href="{% url 'user_account' pk=owner.user.pk %}" style="color: var(--primary-color); text-decoration: none; font-weight: 500;">{{ owner.user.username }}</a>
                             {% if user.is_authenticated and not is_owner %}
-                                <form method="post" action="{% url 'request_raised' %}">
+                                <form method="post" action="{% url 'request_raised' %}" style="margin: 0;">
                                     {% csrf_token %}
                                     <input type="hidden" name="owner" value="{{ owner.user.pk }}">
                                     <input type="hidden" name="requester" value="{{ user.pk }}">
                                     <input type="hidden" name="google_book_id" value="{{ book.google_book_id }}">
-                                    <!-- If already requested then disable button -->
-                                    {% if owner.user.username in requested_owner_usernames%}
-                                        <button type="submit" class="btn btn-sm" style="background-color: var(--bg-tertiary); color: var(--text-muted); border: 1px solid var(--bg-elevated); cursor: not-allowed;" disabled>Requested</button>
+                                    {% if owner.user.username in requested_owner_usernames %}
+                                        <button type="submit" class="btn btn-sm" style="background-color: var(--bg-tertiary); color: var(--text-muted); border: 1px solid var(--bg-elevated); cursor: not-allowed; padding: var(--space-sm) var(--space-lg); font-size: 0.875rem;" disabled>✓ Requested</button>
                                     {% else %}
-                                        <button type="submit" class="btn btn-sm" style="background-color: var(--bs-secondary); color: white; border: none;">Request</button>
+                                        <button type="submit" class="btn btn-primary btn-sm" style="padding: var(--space-sm) var(--space-lg); font-size: 0.875rem; font-weight: 600; min-width: 140px;">Request Book</button>
                                     {% endif %}
                                 </form>
                             {% endif %}
-                        </li>
+                        </div>
                     {% endfor %}
-                </ol>
-            </div>
-            <div class="col">
-                <p>{{user_wish_count}} wisher{{user_wish_count|pluralize}}:</p>
-                <ol>
-                    {% for wisher in user_wish %}
-                        <li><a href="{% url 'user_account' pk=wisher.user.pk %}">{{ wisher.user.username }}</a></li>
-                    {% endfor %}
-                </ol>
-            </div>
+                </div>
+            {% else %}
+                <p style="color: var(--text-muted); text-align: center; padding: var(--space-lg);">No owners yet. Be the first to add this book to your library!</p>
+            {% endif %}
         </div>
     </div>
+
+    <!-- Collapsible Wishers Section -->
+    <div id="wishers-section" class="community-collapse" style="margin-bottom: var(--space-lg);">
+        <div style="background: var(--bg-elevated); border-radius: var(--radius-lg); padding: var(--space-xl); box-shadow: var(--shadow-md);">
+            <h3 style="color: var(--text-primary); margin-bottom: var(--space-lg); font-size: 1.25rem; font-weight: 600;">
+                ⭐ People Wishing for This Book
+            </h3>
+            {% if user_wish %}
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-sm);">
+                    {% for wisher in user_wish %}
+                        <div style="padding: var(--space-md); background: var(--bg-secondary); border-radius: var(--radius-md); transition: var(--transition-base);">
+                            <a href="{% url 'user_account' pk=wisher.user.pk %}" style="color: var(--primary-color); text-decoration: none; font-weight: 500;">{{ wisher.user.username }}</a>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p style="color: var(--text-muted); text-align: center; padding: var(--space-lg);">No one has wishlisted this book yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Book Details Section -->
+    <div class="row">
+        <!-- Book Metadata -->
+        <div class="col-md-6" style="margin-bottom: var(--space-lg);">
+            <div style="background: var(--bg-elevated); border-radius: var(--radius-lg); padding: var(--space-xl); box-shadow: var(--shadow-md); height: 100%;">
+                <h3 style="color: var(--text-primary); margin-bottom: var(--space-lg); font-size: 1.25rem; font-weight: 600;">Book Details</h3>
+
+                <div style="display: grid; gap: var(--space-md);">
+                    <!-- Authors -->
+                    {% if book.authors %}
+                    <div style="display: flex; padding: var(--space-sm) 0; border-bottom: 1px solid var(--bg-tertiary);">
+                        <div style="min-width: 120px; color: var(--text-muted); font-weight: 500;">Authors</div>
+                        <div style="color: var(--text-primary); flex: 1;">{{ book.authors }}</div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Publisher -->
+                    {% if book.publisher %}
+                    <div style="display: flex; padding: var(--space-sm) 0; border-bottom: 1px solid var(--bg-tertiary);">
+                        <div style="min-width: 120px; color: var(--text-muted); font-weight: 500;">Publisher</div>
+                        <div style="color: var(--text-primary); flex: 1;">{{ book.publisher }}</div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Published Date -->
+                    {% if book.published_date %}
+                    <div style="display: flex; padding: var(--space-sm) 0; border-bottom: 1px solid var(--bg-tertiary);">
+                        <div style="min-width: 120px; color: var(--text-muted); font-weight: 500;">Published</div>
+                        <div style="color: var(--text-primary); flex: 1;">{{ book.published_date }}</div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Language -->
+                    {% if book.language %}
+                    <div style="display: flex; padding: var(--space-sm) 0; border-bottom: 1px solid var(--bg-tertiary);">
+                        <div style="min-width: 120px; color: var(--text-muted); font-weight: 500;">Language</div>
+                        <div style="color: var(--text-primary); flex: 1;">{{ book.language|upper }}</div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Page Count (ONLY appears here now) -->
+                    {% if book.pagecount %}
+                    <div style="display: flex; padding: var(--space-sm) 0; border-bottom: 1px solid var(--bg-tertiary);">
+                        <div style="min-width: 120px; color: var(--text-muted); font-weight: 500;">Pages</div>
+                        <div style="color: var(--text-primary); flex: 1;">{{ book.pagecount }} pages</div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Categories/Genres -->
+                    {% if book.categories %}
+                    <div style="display: flex; padding: var(--space-sm) 0; border-bottom: 1px solid var(--bg-tertiary);">
+                        <div style="min-width: 120px; color: var(--text-muted); font-weight: 500;">Genres</div>
+                        <div style="color: var(--text-primary); flex: 1; display: flex; gap: var(--space-sm); flex-wrap: wrap;">
+                            {% for category in book.categories|split:',' %}
+                                <span style="background: var(--bg-tertiary); padding: var(--space-xs) var(--space-sm); border-radius: var(--radius-sm); font-size: 0.875rem;">{{ category }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Average Rating -->
+                    {% if book.average_rating %}
+                    <div style="display: flex; padding: var(--space-sm) 0; border-bottom: 1px solid var(--bg-tertiary);">
+                        <div style="min-width: 120px; color: var(--text-muted); font-weight: 500;">Rating</div>
+                        <div style="color: var(--text-primary); flex: 1;">
+                            {{ book.average_rating }}/5.0
+                            {% if book.ratings_count %}
+                                <span style="color: var(--text-muted); font-size: 0.875rem;">({{ book.ratings_count }} ratings)</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Maturity Rating -->
+                    {% if book.maturity_rating %}
+                    <div style="display: flex; padding: var(--space-sm) 0; border-bottom: 1px solid var(--bg-tertiary);">
+                        <div style="min-width: 120px; color: var(--text-muted); font-weight: 500;">Content Rating</div>
+                        <div style="color: var(--text-primary); flex: 1;">{{ book.maturity_rating|title }}</div>
+                    </div>
+                    {% endif %}
+
+                    <!-- ISBNs -->
+                    {% if book.ID_ISBN_13 or book.ID_ISBN_10 %}
+                    <div style="display: flex; padding: var(--space-sm) 0; border-bottom: 1px solid var(--bg-tertiary);">
+                        <div style="min-width: 120px; color: var(--text-muted); font-weight: 500;">ISBN</div>
+                        <div style="color: var(--text-primary); flex: 1; display: flex; gap: var(--space-sm); flex-wrap: wrap;">
+                            {% if book.ID_ISBN_13 %}
+                                <span style="background: var(--bg-tertiary); padding: var(--space-xs) var(--space-sm); border-radius: var(--radius-sm); font-size: 0.875rem; font-family: monospace;">{{ book.ID_ISBN_13 }}</span>
+                            {% endif %}
+                            {% if book.ID_ISBN_10 %}
+                                <span style="background: var(--bg-tertiary); padding: var(--space-xs) var(--space-sm); border-radius: var(--radius-sm); font-size: 0.875rem; font-family: monospace;">{{ book.ID_ISBN_10 }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Google Book ID -->
+                    <div style="display: flex; padding: var(--space-sm) 0; border-bottom: 1px solid var(--bg-tertiary);">
+                        <div style="min-width: 120px; color: var(--text-muted); font-weight: 500;">Book ID</div>
+                        <div style="color: var(--text-primary); flex: 1;">
+                            <span style="background: var(--bg-tertiary); padding: var(--space-xs) var(--space-sm); border-radius: var(--radius-sm); font-size: 0.875rem; font-family: monospace;">{{ book.google_book_id }}</span>
+                        </div>
+                    </div>
+
+                    <!-- External Links -->
+                    {% if book.preview_link or book.info_link %}
+                    <div style="display: flex; gap: var(--space-md); margin-top: var(--space-lg); padding-top: var(--space-lg); border-top: 1px solid var(--bg-tertiary);">
+                        {% if book.preview_link %}
+                            <a href="{{ book.preview_link }}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="flex: 1; text-align: center; padding: var(--space-md); border-radius: var(--radius-md); text-decoration: none; font-weight: 600;">Preview on Google Books</a>
+                        {% endif %}
+                        {% if book.info_link %}
+                            <a href="{{ book.info_link }}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="flex: 1; text-align: center; padding: var(--space-md); border-radius: var(--radius-md); text-decoration: none; font-weight: 600;">More Information</a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Description -->
+        <div class="col-md-6" style="margin-bottom: var(--space-lg);">
+            {% if book.description %}
+            <div style="background: var(--bg-elevated); border-radius: var(--radius-lg); padding: var(--space-xl); box-shadow: var(--shadow-md); height: 100%;">
+                <h3 style="color: var(--text-primary); margin-bottom: var(--space-lg); font-size: 1.25rem; font-weight: 600;">Description</h3>
+                <p style="color: var(--text-secondary); line-height: 1.7; font-size: 1rem; margin: 0;">{{ book.description }}</p>
+            </div>
+            {% else %}
+            <div style="background: var(--bg-elevated); border-radius: var(--radius-lg); padding: var(--space-xl); box-shadow: var(--shadow-md); height: 100%; display: flex; align-items: center; justify-content: center;">
+                <p style="color: var(--text-muted); font-style: italic;">No description available for this book.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleSection(sectionId, iconId) {
+        const section = document.getElementById(sectionId);
+        const icon = document.getElementById(iconId);
+
+        if (section.classList.contains('active')) {
+            section.classList.remove('active');
+            icon.classList.remove('rotated');
+        } else {
+            section.classList.add('active');
+            icon.classList.add('rotated');
+        }
+    }
+</script>
 
 {% endblock %}

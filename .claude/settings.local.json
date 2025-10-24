@@ -9,7 +9,26 @@
       "Bash(pip install:*)",
       "Bash(python manage.py:*)",
       "Bash(npx --version:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Skill(pair-programming)",
+      "Bash(npx claude-flow@alpha:*)",
+      "Bash(claude mcp list:*)",
+      "Bash(claude mcp restart:*)",
+      "Bash(claude mcp logs:*)",
+      "Bash(claude mcp --help)",
+      "Bash(claude mcp:*)",
+      "Read(//c/Users/rickp/**)",
+      "Bash(.venvScriptsactivate)",
+      "Bash(venv/Scripts/pip install:*)",
+      "Bash(venv/Scripts/python manage.py check:*)",
+      "Bash(venv/Scripts/python manage.py runserver:*)",
+      "Bash(venv/Scripts/python:*)",
+      "Bash(venvScriptspython manage.py makemigrations books --name add_google_books_fields)",
+      "Bash(if not exist \"books\\templatetags\" mkdir bookstemplatetags)",
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "Bash(python -c:*)",
+      "Bash(del \"C:\\Users\\rickp\\Documents\\GitRepos\\bookswap\\staticfiles\\admin\\js\\vendor\\select2\\i18n\\el.js\")"
     ],
     "deny": []
   }

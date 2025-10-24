@@ -1,133 +1,284 @@
 {% extends "base.html" %}
+{% load static %}
 {% block body_block %}
 
-    <div class="container my-5">
-        <div class="p-3 text-center bg-body-tertiary rounded-3">
-            <h1 class="text-body-emphasis">Requests</h1>
-            <p class="lead">
-                {% if filter_by == 'requester' %}
-                    Your requests for other people's books
-                {% else %}
-                    Requests for your books
-                {% endif %}
-            </p>
-        </div>
+    <!-- Page Header with Gradient -->
+    <div class="page-header">
+        <h1>Book Requests</h1>
+        <p class="lead" style="margin-bottom: var(--space-lg);">
+            {% if filter_by == 'requester' %}
+                Your requests for other people's books
+            {% else %}
+                Requests for your books
+            {% endif %}
+        </p>
     </div>
 
-    <style>
-        table {
-            border-collapse: collapse;
-            width: 100%;
-        }
-        th, td {
-            border: 1px solid #dddddd;
-            text-align: left;
-            padding: 8px;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-    </style>
-    {% if requests_to_user_open.count > 0 %}
-        <h1>Live Requests ({{requests_to_user_open.count}})</h1>
-        <p><i>
-            {% if filter_by == 'requester' %}
-                Your requests which are waiting for a reply from the owner. Please wait for a response
+    <!-- Main Container -->
+    <div class="container" style="max-width: 1200px; margin: var(--space-2xl) auto; padding: 0 var(--space-lg);">
+
+        <!-- All Requests by Book Section -->
+        <div style="margin-bottom: var(--space-2xl);">
+            <div style="display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-lg);">
+                <h2 style="color: var(--text-primary); font-size: 1.75rem; font-weight: 600; margin: 0;">
+                    All Book Requests
+                </h2>
+                <span style="background: var(--primary-color); color: white; padding: var(--space-xs) var(--space-md); border-radius: var(--radius-lg); font-size: 0.875rem; font-weight: 600;">
+                    {{ all_requests_by_book|length }} Book{{ all_requests_by_book|length|pluralize }}
+                </span>
+            </div>
+
+            <p style="color: var(--text-muted); font-style: italic; margin-bottom: var(--space-lg);">
+                Books with live requests appear first, showing all request statuses
+            </p>
+
+            {% if all_requests_by_book %}
+                <div style="display: grid; gap: var(--space-xl);">
+                    {% for book_data in all_requests_by_book %}
+                        {% with book=book_data.book requests=book_data.requests has_live=book_data.has_live_request has_loan=book_data.has_active_loan active_loan=book_data.active_loan %}
+                        <div style="background: var(--bg-elevated); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); {% if has_live %}border-left: 4px solid var(--primary-color);{% else %}border-left: 4px solid var(--bg-tertiary);{% endif %} overflow: hidden; transition: all 0.2s ease;">
+
+                            <!-- Book Header with Thumbnail -->
+                            <div style="background: {% if has_live %}linear-gradient(135deg, rgba(var(--primary-rgb), 0.05) 0%, rgba(var(--primary-rgb), 0.02) 100%);{% else %}var(--bg-secondary);{% endif %} padding: var(--space-lg); border-bottom: 1px solid var(--bg-tertiary);">
+                                <div style="display: flex; gap: var(--space-lg); align-items: start;">
+                                    <!-- Book Thumbnail -->
+                                    <div style="flex-shrink: 0;">
+                                        {% if book.thumbnail %}
+                                            <img src="{{ MEDIA_URL }}{{ book.thumbnail }}" alt="{{ book.title }}" style="width: 80px; height: 120px; object-fit: cover; border-radius: var(--radius-md); box-shadow: var(--shadow-md);">
+                                        {% else %}
+                                            <img src="{% static 'generic_thumbnail.jpeg' %}" alt='No Thumbnail' style="width: 80px; height: 120px; object-fit: cover; border-radius: var(--radius-md); box-shadow: var(--shadow-md);">
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Book Info -->
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div style="display: flex; align-items: start; justify-content: space-between; gap: var(--space-md); flex-wrap: wrap;">
+                                            <div style="flex: 1; min-width: 250px;">
+                                                <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600; margin-bottom: var(--space-xs);">
+                                                    Book Title
+                                                </div>
+                                                <div style="display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap;">
+                                                    <a href="{% url 'single_book' pk=book.pk %}" style="color: {% if has_live %}var(--primary-color){% else %}var(--text-primary){% endif %}; text-decoration: none; font-size: 1.5rem; font-weight: 700; transition: opacity 0.2s; display: inline-block; line-height: 1.3;">
+                                                        {{ book.title }}
+                                                    </a>
+                                                    {% if has_loan %}
+                                                        <span style="display: inline-flex; align-items: center; gap: var(--space-xs); background: rgba(255, 193, 7, 0.1); color: #ffc107; padding: var(--space-xs) var(--space-sm); border-radius: var(--radius-md); font-size: 0.75rem; font-weight: 600; white-space: nowrap;">
+                                                            🔒 Currently Loaned
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+                                                {% if book.authors %}
+                                                    <div style="color: var(--text-muted); font-size: 0.875rem; margin-top: var(--space-xs);">
+                                                        by {{ book.authors }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+
+                                            <!-- Request Summary Badges -->
+                                            <div style="display: flex; gap: var(--space-sm); flex-wrap: wrap; align-items: center;">
+                                                {% if book_data.open_count > 0 %}
+                                                <div style="display: flex; align-items: center; gap: var(--space-xs); background: rgba(var(--primary-rgb), 0.1); color: var(--primary-color); padding: var(--space-xs) var(--space-md); border-radius: var(--radius-md); font-size: 0.875rem; font-weight: 600;">
+                                                    <svg style="width: 14px; height: 14px;" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                                                    </svg>
+                                                    {{ book_data.open_count }} Awaiting
+                                                </div>
+                                                {% endif %}
+                                                {% if book_data.accepted_count > 0 %}
+                                                <div style="display: flex; align-items: center; gap: var(--space-xs); background: rgba(25, 135, 84, 0.1); color: var(--bs-success); padding: var(--space-xs) var(--space-md); border-radius: var(--radius-md); font-size: 0.875rem; font-weight: 600;">
+                                                    <svg style="width: 14px; height: 14px;" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                                    </svg>
+                                                    {{ book_data.accepted_count }} Accepted
+                                                </div>
+                                                {% endif %}
+                                                {% if book_data.rejected_count > 0 %}
+                                                <div style="display: flex; align-items: center; gap: var(--space-xs); background: rgba(220, 53, 69, 0.1); color: var(--bs-danger); padding: var(--space-xs) var(--space-md); border-radius: var(--radius-md); font-size: 0.875rem; font-weight: 600;">
+                                                    <svg style="width: 14px; height: 14px;" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                                    </svg>
+                                                    {{ book_data.rejected_count }} Rejected
+                                                </div>
+                                                {% endif %}
+
+                                                <!-- View Book Link -->
+                                                <a href="{% url 'single_book' pk=book.pk %}" class="btn btn-sm" style="background-color: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--bg-elevated); padding: var(--space-xs) var(--space-md); font-size: 0.875rem; font-weight: 600; text-decoration: none; white-space: nowrap;">
+                                                    View Book
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- All Requests List -->
+                            <div style="padding: var(--space-md);">
+                                {% for request in requests %}
+                                    <div style="background: {% cycle 'var(--bg-secondary)' 'transparent' %}; border-radius: var(--radius-md); padding: var(--space-lg); margin-bottom: var(--space-sm); transition: all 0.2s ease; {% if request.status.is_live %}border-left: 3px solid var(--primary-color);{% elif request.status.is_accepted %}border-left: 3px solid var(--bs-success);{% elif request.status.is_rejected %}border-left: 3px solid var(--bs-danger);{% endif %}">
+                                        <div style="display: grid; grid-template-columns: 1fr auto; gap: var(--space-lg); align-items: {% if request.status.is_rejected and request.reject_reason %}start{% else %}center{% endif %};">
+
+                                            <!-- Request Information -->
+                                            <div>
+                                                <div style="display: flex; gap: var(--space-xl); flex-wrap: wrap; align-items: center; margin-bottom: {% if request.status.is_rejected and request.reject_reason %}var(--space-md){% else %}0{% endif %};">
+                                                    <!-- User Info -->
+                                                    <div style="min-width: 150px;">
+                                                        <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600; margin-bottom: var(--space-xs);">
+                                                            {% if filter_by == 'owner' %}Requester{% else %}Owner{% endif %}
+                                                        </div>
+                                                        {% if filter_by == 'owner' %}
+                                                            <a href="{% url 'user_account' pk=request.requester.pk %}" style="color: var(--text-primary); text-decoration: none; font-weight: 600; font-size: 1.125rem; transition: color 0.2s;">
+                                                                {{ request.requester }}
+                                                            </a>
+                                                        {% else %}
+                                                            <a href="{% url 'user_account' pk=request.owner.pk %}" style="color: var(--text-primary); text-decoration: none; font-weight: 600; font-size: 1.125rem; transition: color 0.2s;">
+                                                                {{ request.owner }}
+                                                            </a>
+                                                        {% endif %}
+                                                    </div>
+
+                                                    <!-- Request Date -->
+                                                    <div style="min-width: 180px;">
+                                                        <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600; margin-bottom: var(--space-xs);">
+                                                            Request Date
+                                                        </div>
+                                                        <div style="color: var(--text-secondary); font-weight: 500; display: flex; align-items: center; gap: var(--space-xs);">
+                                                            <svg style="width: 16px; height: 16px; opacity: 0.6;" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
+                                                            </svg>
+                                                            <span>{{ request.request_datetime|date:"M d, Y" }}</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Decision Date (if accepted or rejected) -->
+                                                    {% if request.status.is_accepted or request.status.is_rejected %}
+                                                    <div style="min-width: 180px;">
+                                                        <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600; margin-bottom: var(--space-xs);">
+                                                            {% if request.status.is_accepted %}Accepted{% else %}Rejected{% endif %}
+                                                        </div>
+                                                        <div style="color: var(--text-secondary); font-weight: 500; display: flex; align-items: center; gap: var(--space-xs);">
+                                                            <svg style="width: 16px; height: 16px; opacity: 0.6;" fill="currentColor" viewBox="0 0 20 20">
+                                                                {% if request.status.is_accepted %}
+                                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                                                {% else %}
+                                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                                                {% endif %}
+                                                            </svg>
+                                                            <span>{{ request.decision_datetime|date:"M d, Y" }}</span>
+                                                        </div>
+                                                    </div>
+                                                    {% endif %}
+
+                                                    <!-- Status Badge -->
+                                                    <div>
+                                                        {% if request.status.is_live %}
+                                                        <span style="display: inline-flex; align-items: center; gap: var(--space-xs); background: rgba(var(--primary-rgb), 0.1); color: var(--primary-color); padding: var(--space-xs) var(--space-md); border-radius: var(--radius-md); font-size: 0.875rem; font-weight: 600;">
+                                                            <svg style="width: 14px; height: 14px;" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                                                            </svg>
+                                                            Awaiting Response
+                                                        </span>
+                                                        {% elif request.status.is_accepted %}
+                                                        <span style="display: inline-flex; align-items: center; gap: var(--space-xs); background: rgba(25, 135, 84, 0.1); color: var(--bs-success); padding: var(--space-xs) var(--space-md); border-radius: var(--radius-md); font-size: 0.875rem; font-weight: 600;">
+                                                            <svg style="width: 14px; height: 14px;" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                                            </svg>
+                                                            Accepted
+                                                        </span>
+                                                        {% elif request.status.is_rejected %}
+                                                        <span style="display: inline-flex; align-items: center; gap: var(--space-xs); background: rgba(220, 53, 69, 0.1); color: var(--bs-danger); padding: var(--space-xs) var(--space-md); border-radius: var(--radius-md); font-size: 0.875rem; font-weight: 600;">
+                                                            <svg style="width: 14px; height: 14px;" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                                            </svg>
+                                                            Rejected
+                                                        </span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+
+                                                <!-- Rejection Reason (if applicable) -->
+                                                {% if request.status.is_rejected and request.reject_reason %}
+                                                <div style="background: rgba(220, 53, 69, 0.05); border-left: 3px solid var(--bs-danger); border-radius: var(--radius-md); padding: var(--space-md); margin-top: var(--space-md);">
+                                                    <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600; margin-bottom: var(--space-xs); display: flex; align-items: center; gap: var(--space-xs);">
+                                                        <svg style="width: 14px; height: 14px;" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                                                        </svg>
+                                                        Rejection Reason
+                                                    </div>
+                                                    <div style="color: var(--text-secondary); font-style: italic; line-height: 1.5;">
+                                                        "{{ request.reject_reason }}"
+                                                    </div>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+
+                                            <!-- Action Button -->
+                                            <div style="min-width: 140px;">
+                                                {% if request.status.is_live %}
+                                                    {% if filter_by == 'owner' %}
+                                                        {% if has_loan %}
+                                                            <a href="{% url 'requests_to_user_single' pk=request.pk %}" class="btn btn-primary" style="padding: var(--space-md) var(--space-lg); font-weight: 600; text-align: center; text-decoration: none; white-space: nowrap; display: inline-block; width: 100%; opacity: 0.6; cursor: not-allowed; pointer-events: none;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Currently loaned out">
+                                                                View Request
+                                                            </a>
+                                                        {% else %}
+                                                            <a href="{% url 'requests_to_user_single' pk=request.pk %}" class="btn btn-primary" style="padding: var(--space-md) var(--space-lg); font-weight: 600; text-align: center; text-decoration: none; white-space: nowrap; display: inline-block; width: 100%;">
+                                                                View Request
+                                                            </a>
+                                                        {% endif %}
+                                                    {% else %}
+                                                        <form method="post" action="{% url 'cancel_request' %}" style="margin: 0;">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="request_id" value="{{ request.pk }}">
+                                                            <button type="submit" class="btn" style="width: 100%; background-color: var(--bs-warning); color: white; border: none; padding: var(--space-md) var(--space-lg); font-weight: 600; border-radius: var(--radius-md); transition: all 0.2s; cursor: pointer;" onclick="return confirm('Are you sure you want to cancel this request?')">
+                                                                Cancel Request
+                                                            </button>
+                                                        </form>
+                                                    {% endif %}
+                                                {% elif request.status.is_accepted and filter_by == 'owner' and has_loan and active_loan.borrower.pk == request.requester.pk %}
+                                                    <!-- End Loan Button for Active Loans -->
+                                                    <form method="post" action="{% url 'end_loan' %}" style="margin: 0;">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="transaction_id" value="{{ active_loan.pk }}">
+                                                        <button type="submit" class="btn btn-success" style="width: 100%; padding: var(--space-md) var(--space-lg); font-weight: 600; border-radius: var(--radius-md); transition: all 0.2s; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: var(--space-xs);" onclick="return confirm('Mark this loan as completed?')">
+                                                            <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                                            </svg>
+                                                            End Loan
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endwith %}
+                    {% endfor %}
+                </div>
             {% else %}
-                These requests require a reply from you!
+                <div style="background: var(--bg-elevated); border-radius: var(--radius-lg); padding: var(--space-2xl); text-align: center; box-shadow: var(--shadow-md);">
+                    <div style="font-size: 3rem; margin-bottom: var(--space-md); opacity: 0.5;">📚</div>
+                    <p style="color: var(--text-muted); font-size: 1.125rem; margin: 0;">
+                        {% if filter_by == 'requester' %}
+                            You haven't made any book requests yet
+                        {% else %}
+                            No requests have been made for your books
+                        {% endif %}
+                    </p>
+                </div>
             {% endif %}
-        </i></p>
-        <table>
-            <thead>
-                <tr>
-                    <th>Book</th>
-                    {% if filter_by == 'owner' %}
-                        <th>Requester</th>
-                    {% else %}
-                        <th>Owner</th>
-                    {% endif %}
-                    <th>Request Datetime</th>
-                    {% if filter_by == 'owner' %}
-                        <th>Request Details</th>
-                    {% else %}
-                        <th>Action</th>
-                    {% endif %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for request_book in requests_to_user_open %}
-                    <tr>
-                        <td><a style="text-decoration:none; color:inherit;" href="{% url 'single_book' pk=request_book.book.pk %}">{{ request_book.book }}</a></td>
-                        {% if filter_by == 'owner' %}
-                            <td><a style="text-decoration:none; color:inherit;" href="{% url 'user_account' pk=request_book.requester.pk %}">{{ request_book.requester }}</a></td>
-                        {% else %}
-                            <td><a style="text-decoration:none; color:inherit;" href="{% url 'user_account' pk=request_book.owner.pk %}">{{ request_book.owner }}</a></td>
-                        {% endif %}
-                        <td>{{ request_book.request_datetime }}</td>
-                        {% if filter_by == 'owner' %}
-                            <td><a href="{% url 'requests_to_user_single' pk=request_book.pk %}">View</a></td>
-                        {% else %}
-                            <td>
-                                <form method="post" action="{% url 'cancel_request' %}" style="display:inline;">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="request_id" value="{{ request_book.pk }}">
-                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to cancel this request?')">Cancel</button>
-                                </form>
-                            </td>
-                        {% endif %}
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <p>You have no open requests to action</p>
-    {% endif %}
-    <br><br>
-    <h1>Accepted Requests ({{requests_to_user_accept.count}})</h1>
-    <table>
-        <thead>
-            <tr>
-                <th>Book</th>
-                <th>Requester</th>
-                <th>Request Datetime</th>
-                <th>Decision Date</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for request_book in requests_to_user_accept %}
-                <tr>
-                    <td><a style="text-decoration:none; color:inherit;" href="{% url 'single_book' pk=request_book.book.pk %}">{{ request_book.book }}</a></td>
-                    <td><a style="text-decoration:none; color:inherit;" href="{% url 'user_account' pk=request_book.requester.pk %}">{{ request_book.requester }}</a></td>
-                    <td>{{ request_book.request_datetime }}</td>
-                    <td>{{ request_book.decision_datetime }}</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    <br><br>
-    <h1>Rejected Requests ({{requests_to_user_reject.count}})</h1>
-    <table>
-        <thead>
-            <tr>
-                <th>Book</th>
-                <th>Requester</th>
-                <th>Request Date</th>
-                <th>Decision Date</th>
-                <th>Rejection Reason</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for request_book in requests_to_user_reject %}
-                <tr>
-                    <td><a style="text-decoration:none; color:inherit;" href="{% url 'single_book' pk=request_book.book.pk %}">{{ request_book.book }}</a></td>
-                    <td><a style="text-decoration:none; color:inherit;" href="{% url 'user_account' pk=request_book.requester.pk %}">{{ request_book.requester }}</a></td>
-                    <td>{{ request_book.request_datetime }}</td>
-                    <td>{{ request_book.decision_datetime }}</td>
-                    <td>{{ request_book.reject_reason}}</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    <br>
+        </div>
+
+    </div>
+
+    <!-- Bootstrap Tooltip Initialization -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
+    </script>
 
 {% endblock %}

@@ -28,7 +28,8 @@
       "Bash(dir:*)",
       "Bash(findstr:*)",
       "Bash(python -c:*)",
-      "Bash(del \"C:\\Users\\rickp\\Documents\\GitRepos\\bookswap\\staticfiles\\admin\\js\\vendor\\select2\\i18n\\el.js\")"
+      "Bash(del \"C:\\Users\\rickp\\Documents\\GitRepos\\bookswap\\staticfiles\\admin\\js\\vendor\\select2\\i18n\\el.js\")",
+      "Bash(del \"C:\\Users\\rickp\\Documents\\GitRepos\\bookswap\\books\\templates\\account_script.js\")"
     ],
     "deny": []
   }

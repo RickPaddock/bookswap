@@ -66,6 +66,17 @@ class CreateGroup(LoginRequiredMixin, CreateView):
     fields = ("group_name", "description", "is_private")
     success_url = reverse_lazy("group_database")
 
+    def form_valid(self, form):
+        # Save the group first
+        response = super().form_valid(form)
+        # Add the creator as an admin member of the group
+        GroupMember.objects.create(
+            user=self.request.user,
+            group=self.object,
+            admin=True
+        )
+        return response
+
 
 class JoinGroup(LoginRequiredMixin, RedirectView):
 
@@ -139,9 +150,13 @@ class UserAccount(TemplateView):
         user_pk = self.kwargs["pk"]  # obtain elements from URL
         user_username = get_object_or_404(CustomUser, id=user_pk)
 
-        # Query the user's books
-        user_books = Book.objects.filter(owner=user_pk).order_by("title")
-        user_book_count = UserBook.objects.filter(user=user_pk).count()
+        # Query the user's books with date_added from UserBook
+        user_books_with_dates = UserBook.objects.filter(user=user_pk).select_related('book').order_by('book__title')
+        user_books = [ub.book for ub in user_books_with_dates]
+        # Attach date_added to each book for template access
+        for i, ub in enumerate(user_books_with_dates):
+            user_books[i].date_added = ub.date_added
+        user_book_count = user_books_with_dates.count()
 
         # Query the user's book wishes
         # TODO: Put this in reusable function with the one in SingleBook
@@ -168,6 +183,25 @@ class UserAccount(TemplateView):
             owner=user_pk, decision_datetime__isnull=True, cancelled_datetime__isnull=True
         ).order_by("request_datetime")
 
+        # For logged-in users viewing another user's profile, track which books they've already requested
+        requested_book_ids = set()
+        viewer_owned_book_ids = set()
+        if self.request.user.is_authenticated and self.request.user.id != user_pk:
+            # Get book IDs that the current user has already requested from this owner
+            requested_book_ids = set(
+                RequestBook.objects.filter(
+                    requester=self.request.user,
+                    owner=user_username,
+                    decision_datetime__isnull=True,
+                    cancelled_datetime__isnull=True
+                ).values_list('book_id', flat=True)
+            )
+
+            # Get book IDs that the current logged-in user owns (to prevent requesting books they already have)
+            viewer_owned_book_ids = set(
+                Book.objects.filter(owner=self.request.user).values_list('pk', flat=True)
+            )
+
         # Add the data to the context
         context["user_username"] = user_username
         context["user_books"] = user_books
@@ -180,6 +214,8 @@ class UserAccount(TemplateView):
         context[
             "user_requests_recieved_open_count"
         ] = user_requests_recieved_open.count()
+        context["requested_book_ids"] = requested_book_ids
+        context["viewer_owned_book_ids"] = viewer_owned_book_ids
 
         return context
 
@@ -341,48 +377,90 @@ def process_book_item(item):
 
 
 def book_search(request):
+    # Support both POST (new search) and GET (pagination)
+    query = request.POST.get("query") or request.GET.get("query")
+    page = int(request.GET.get("page", 1))
 
-    if request.method == "POST":
-        query = request.POST.get("query")
+    # Google Books API pagination parameters
+    max_results = 12  # Results per page (3x4 grid)
+    start_index = (page - 1) * max_results
 
-        if query:
-            try:
-                # Google Books API URL
-                url = f"https://www.googleapis.com/books/v1/volumes?q={query}&key={settings.GOOGLE_BOOKS_API_KEY}"
+    if query:
+        try:
+            # Google Books API URL with pagination
+            url = f"https://www.googleapis.com/books/v1/volumes?q={query}&maxResults={max_results}&startIndex={start_index}&key={settings.GOOGLE_BOOKS_API_KEY}"
 
-                # Make a request to the API
-                response = requests.get(url)
-                response.raise_for_status()  # Raise error for bad responses
+            # Make a request to the API
+            response = requests.get(url)
+            response.raise_for_status()  # Raise error for bad responses
 
-                # Parse the JSON response
-                data = response.json()
+            # Parse the JSON response
+            data = response.json()
 
-                # Pull back ALL json sections of the selected book
-                data_items = get_book_section(data, "items")
+            # Get total results count
+            total_items = data.get("totalItems", 0)
 
-                # Extract relevant information
-                books = [process_book_item(item) for item in data_items]
+            # Pull back ALL json sections of the selected book
+            data_items = get_book_section(data, "items")
 
-                # Render the search results
-                return render(
-                    request, "book_search.html", {"books": books, "query": query}
+            # Extract relevant information
+            books = [process_book_item(item) for item in data_items]
+
+            # Calculate pagination info
+            total_pages = (total_items + max_results - 1) // max_results  # Ceiling division
+            has_previous = page > 1
+            has_next = page < total_pages
+
+            # Get user's owned books and wishlist for authenticated users
+            user_owned_book_ids = set()
+            user_wishlist_book_ids = set()
+
+            if request.user.is_authenticated:
+                # Get IDs of books the user owns
+                user_owned_book_ids = set(
+                    Book.objects.filter(owner=request.user).values_list('google_book_id', flat=True)
                 )
 
-            except RequestException as e:
-                # Handle request-related exceptions
-                return render(
-                    request,
-                    "book_search.html",
-                    {"error_message": f"Error making API request: {e}"},
+                # Get IDs of books on user's active wishlist (removed_datetime is null)
+                user_wishlist_book_ids = set(
+                    Wishlist.objects.filter(
+                        user=request.user,
+                        removed_datetime__isnull=True
+                    ).values_list('book__google_book_id', flat=True)
                 )
 
-            except JSONDecodeError as e:
-                # Handle JSON decoding error
-                return render(
-                    request,
-                    "book_search.html",
-                    {"error_message": f"Error decoding JSON response: {e}"},
-                )
+            # Render the search results
+            return render(
+                request, "book_search.html", {
+                    "books": books,
+                    "query": query,
+                    "page": page,
+                    "total_pages": total_pages,
+                    "total_items": total_items,
+                    "has_previous": has_previous,
+                    "has_next": has_next,
+                    "start_index": start_index + 1,
+                    "end_index": min(start_index + max_results, total_items),
+                    "user_owned_book_ids": user_owned_book_ids,
+                    "user_wishlist_book_ids": user_wishlist_book_ids,
+                }
+            )
+
+        except RequestException as e:
+            # Handle request-related exceptions
+            return render(
+                request,
+                "book_search.html",
+                {"error_message": f"Error making API request: {e}"},
+            )
+
+        except JSONDecodeError as e:
+            # Handle JSON decoding error
+            return render(
+                request,
+                "book_search.html",
+                {"error_message": f"Error decoding JSON response: {e}"},
+            )
 
     return render(request, "book_search.html")
 
@@ -440,10 +518,10 @@ class AddToLibraryWishView(View):
         # Extract all POST parameters using registry pattern
         params = {key: request.POST.get(key) for key in self.BOOK_PARAMS}
 
-        # Clean numeric fields - convert "None" strings and empty strings to Python None
-        def clean_numeric(value):
-            """Convert 'None' string or empty string to Python None for numeric fields"""
-            if value in ("None", "", None):
+        # Clean fields - convert "None", "N/A" strings and empty strings to Python None
+        def clean_field(value):
+            """Convert 'None', 'N/A' string or empty string to Python None for fields with unique constraints"""
+            if value in ("None", "N/A", "", None):
                 return None
             return value
 
@@ -458,15 +536,15 @@ class AddToLibraryWishView(View):
                         "thumbnail": params["thumbnail"],
                         "description": params["description"],
                         "pagecount": params["pageCount"],
-                        "ID_ISBN_13": params["ID_ISBN_13"],
-                        "ID_ISBN_10": params["ID_ISBN_10"],
-                        "ID_OTHER": params["ID_OTHER"],
+                        "ID_ISBN_13": clean_field(params["ID_ISBN_13"]),
+                        "ID_ISBN_10": clean_field(params["ID_ISBN_10"]),
+                        "ID_OTHER": clean_field(params["ID_OTHER"]),
                         "published_date": params["published_date"],
                         "language": params["language"],
                         "categories": params["categories"],
                         "publisher": params["publisher"],
-                        "average_rating": clean_numeric(params["average_rating"]),
-                        "ratings_count": clean_numeric(params["ratings_count"]),
+                        "average_rating": clean_field(params["average_rating"]),
+                        "ratings_count": clean_field(params["ratings_count"]),
                         "preview_link": params["preview_link"],
                         "info_link": params["info_link"],
                         "maturity_rating": params["maturity_rating"],

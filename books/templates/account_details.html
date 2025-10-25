@@ -1,63 +1,1041 @@
 {% extends "base.html" %}
 {% block body_block %}
 
-    <div class="page-header">
-        <h1>{{user_username.username|upper}}</h1>
-        <p class="lead">Account Information</p>
-    </div>
-        <br>
-        {% if user.is_authenticated and user.username == user_username.username %}
-            <div class="row" style="margin-bottom: var(--space-lg);">
-                <div class="col" style="display: flex; justify-content: center;">
-                    <a href="{% url 'requests_to_user_all' %}?filter_by=requester" class="btn btn-primary" style="min-width: 200px;">Your book requests ({{user_requests_open_count}})</a>
-                </div>
-                <div class="col" style="display: flex; justify-content: center;">
-                    <a href="{% url 'requests_to_user_all' %}?filter_by=owner" class="btn btn-primary" style="min-width: 200px;">Requested from you ({{user_requests_recieved_open_count}})</a>
-                </div>
-            </div>
-        {% endif %}
-        <div class="row">
-            <div class="col">
-                <p>You have {{ user_book_count }} book{{ user_book_count|pluralize }}:</p>
-                <ol>
-                    {% for book in user_books %}
-                        <li>
-                            <a href="{% url 'single_book' pk=book.pk %}">{{ book.title }}</a>
-                            {% if user.is_authenticated and user.username == user_username.username %}
-                                <form method="post" action="{% url 'remove_book' %}" style="display:inline;">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="book_id" value="{{ book.pk }}">
-                                    <input type="hidden" name="redirect_url" value="user_account">
-                                    <button type="submit" class="btn btn-sm btn-link text-danger p-0 ms-2" onclick="return confirm('Remove this book from your library?')" title="Remove from library">✕</button>
-                                </form>
-                            {% endif %}
-                        </li>
-                    {% endfor %}
-                </ol>
-            </div>
-            <div class="col">
-                <p>You want {{ user_wish_count }} book{{ user_wish_count|pluralize }}:</p>
-                <ol>
-                    {% for wish in user_wish %}
-                        <li>
-                            <a href="{% url 'single_book' pk=wish.book.pk %}">{{ wish.book.title }}</a>
-                            <!-- For wished books, show number of available copies -->
-                            {% if user.is_authenticated and wish.owners_count > 0 %}
-                                ({{ wish.owners_count }} available)
-                            {% endif %}
-                        </li>
-                    {% endfor %}
-                </ol>
-            </div>
-            <div class="col">
-                <p>You belong to {{ user_group_count }} group{{ user_group_count|pluralize }}:</p>
-                <ol>
-                    {% for group in user_groups %}
-                        <li><a href="{% url 'single_group' slug=group.slug %}">{{ group.group_name }}</a></li>
-                    {% endfor %}
-                </ol>
-            </div>
+<style>
+    /* Account-specific styles using design system tokens */
+    .profile-header {
+        background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+        border-radius: var(--radius-xl);
+        padding: var(--space-2xl) var(--space-xl);
+        margin-bottom: var(--space-2xl);
+        border: 1px solid var(--bg-elevated);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .profile-username {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: var(--space-md);
+        background: linear-gradient(135deg, var(--bs-primary), var(--bs-secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .profile-stats {
+        display: flex;
+        gap: var(--space-lg);
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: var(--space-lg);
+    }
+
+    .stat-card {
+        background: var(--bg-elevated);
+        border-radius: var(--radius-lg);
+        padding: var(--space-lg);
+        min-width: 150px;
+        text-align: center;
+        border: 1px solid var(--bg-tertiary);
+        transition: all var(--transition-base);
+        cursor: pointer;
+        user-select: none;
+        position: relative;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--bs-primary);
+    }
+
+    .stat-card.active {
+        border-color: var(--bs-primary);
+        background: linear-gradient(135deg, var(--bs-primary), var(--bs-secondary));
+        box-shadow: var(--shadow-lg);
+    }
+
+    .stat-card.active .stat-number,
+    .stat-card.active .stat-label {
+        color: white;
+    }
+
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--bs-primary);
+        margin-bottom: var(--space-xs);
+    }
+
+    .stat-label {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 500;
+    }
+
+    .stat-availability {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: linear-gradient(135deg, var(--bs-success), #10b981);
+        color: white;
+        padding: 4px 10px;
+        border-radius: var(--radius-md);
+        font-size: 0.7rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+        animation: availability-pulse 2s ease-in-out infinite;
+    }
+
+    .stat-card:hover .stat-availability {
+        animation: none;
+    }
+
+    .stat-availability-icon {
+        font-size: 0.65rem;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: var(--space-lg);
+        justify-content: center;
+        align-items: stretch;
+        flex-wrap: wrap;
+        margin-top: var(--space-2xl);
+    }
+
+    .action-button {
+        flex: 1;
+        min-width: 240px;
+        max-width: 360px;
+        padding: var(--space-lg) var(--space-xl);
+        border-radius: var(--radius-lg);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+        letter-spacing: 0.3px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-xs);
+        border: 2px solid transparent;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Status button (lower priority) - subtle, informational */
+    .action-button.status {
+        background: var(--bg-elevated);
+        border-color: var(--bg-tertiary);
+        color: var(--text-secondary);
+    }
+
+    .action-button.status:hover {
+        border-color: var(--bs-primary);
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .action-button.status .button-count {
+        color: var(--text-muted);
+        font-size: 1.5rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .action-button.status:hover .button-count {
+        color: var(--bs-primary);
+    }
+
+    /* Action button (high priority) - bold, attention-grabbing */
+    .action-button.primary {
+        background: linear-gradient(135deg, var(--bs-secondary), #7c3aed);
+        border-color: var(--bs-secondary);
+        color: white;
+        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    }
+
+    .action-button.primary:hover {
+        background: linear-gradient(135deg, #7c3aed, var(--bs-secondary));
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4);
+        color: white;
+    }
+
+    .action-button.primary .button-count {
+        color: rgba(255, 255, 255, 0.95);
+        font-size: 1.75rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    /* Animated pulse for pending requests */
+    .action-button.has-pending {
+        animation: action-pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes action-pulse {
+        0%, 100% {
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3), 0 0 0 0 rgba(139, 92, 246, 0.6);
+        }
+        50% {
+            box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4), 0 0 0 8px rgba(139, 92, 246, 0);
+        }
+    }
+
+    .action-button.has-pending:hover {
+        animation: none;
+    }
+
+    /* Button text styling */
+    .button-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 600;
+        opacity: 0.85;
+    }
+
+    .action-button.primary .button-label {
+        opacity: 1;
+        font-size: 0.8rem;
+        letter-spacing: 1.2px;
+    }
+
+    .button-count {
+        margin-top: var(--space-xs);
+    }
+
+    /* Old action button styles - keeping for other uses */
+    .old-action-button {
+        background: var(--bs-primary);
+        color: white;
+        padding: var(--space-md) var(--space-xl);
+        border-radius: var(--radius-md);
+        text-decoration: none;
+        font-weight: 600;
+        transition: all var(--transition-base);
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-sm);
+        border: none;
+        cursor: pointer;
+    }
+
+    .old-action-button:hover {
+        background: var(--bs-primary-hover);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+        color: white;
+    }
+
+    .section-container {
+        background: var(--bg-secondary);
+        border-radius: var(--radius-xl);
+        padding: var(--space-xl);
+        margin-bottom: var(--space-xl);
+        border: 1px solid var(--bg-tertiary);
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+        transition: max-height 0.5s ease, opacity 0.3s ease, padding 0.3s ease;
+        padding: 0 var(--space-xl);
+    }
+
+    .section-container.active {
+        max-height: 2000px;
+        opacity: 1;
+        padding: var(--space-xl);
+    }
+
+    /* Sort Controls */
+    .sort-controls {
+        display: flex;
+        align-items: center;
+        gap: var(--space-md);
+        margin-bottom: var(--space-lg);
+        flex-wrap: wrap;
+    }
+
+    .sort-label {
+        font-weight: 600;
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .sort-dropdown {
+        position: relative;
+        min-width: 200px;
+    }
+
+    .sort-select {
+        width: 100%;
+        padding: var(--space-sm) var(--space-lg) var(--space-sm) var(--space-md);
+        border: 2px solid var(--bg-tertiary);
+        border-radius: var(--radius-md);
+        background: var(--bg-elevated);
+        color: var(--text-primary);
+        font-weight: 500;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all var(--transition-base);
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right var(--space-md) center;
+    }
+
+    .sort-select:hover {
+        border-color: var(--bs-primary);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .sort-select:focus {
+        outline: none;
+        border-color: var(--bs-primary);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+
+    /* Pagination */
+    .pagination-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-md);
+        margin-top: var(--space-xl);
+        padding-top: var(--space-lg);
+        border-top: 2px solid var(--bg-tertiary);
+    }
+
+    .pagination-btn {
+        background: var(--bs-primary);
+        color: white;
+        border: none;
+        border-radius: var(--radius-md);
+        padding: var(--space-sm) var(--space-lg);
+        font-weight: 600;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all var(--transition-base);
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-xs);
+    }
+
+    .pagination-btn:hover:not(:disabled) {
+        background: var(--bs-primary-hover);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .pagination-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    .pagination-info {
+        font-weight: 600;
+        color: var(--text-primary);
+        padding: var(--space-sm) var(--space-md);
+        background: var(--bg-elevated);
+        border-radius: var(--radius-md);
+        font-size: 0.875rem;
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: var(--space-lg);
+        padding-bottom: var(--space-md);
+        border-bottom: 2px solid var(--bg-tertiary);
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+    }
+
+    .section-count {
+        background: var(--bs-primary);
+        color: white;
+        padding: var(--space-xs) var(--space-md);
+        border-radius: var(--radius-md);
+        font-size: 0.875rem;
+        font-weight: 600;
+        min-width: 40px;
+        text-align: center;
+    }
+
+    .item-list {
+        display: grid;
+        gap: var(--space-md);
+    }
+
+    .item-card {
+        background: var(--bg-elevated);
+        border-radius: var(--radius-lg);
+        padding: var(--space-md);
+        border: 1px solid var(--bg-tertiary);
+        transition: all var(--transition-base);
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--space-md);
+    }
+
+    .item-card:hover {
+        transform: translateX(4px);
+        border-color: var(--bs-primary);
+        background: var(--bg-tertiary);
+    }
+
+    .item-link {
+        color: var(--text-primary);
+        text-decoration: none;
+        font-weight: 500;
+        transition: color var(--transition-fast);
+        display: block;
+    }
+
+    .item-link:hover {
+        color: var(--bs-primary);
+    }
+
+    .item-badge {
+        background: var(--bs-success);
+        color: white;
+        padding: var(--space-xs) var(--space-sm);
+        border-radius: var(--radius-sm);
+        font-size: 0.75rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .remove-button {
+        background: transparent;
+        border: 1px solid var(--bs-danger);
+        color: var(--bs-danger);
+        padding: var(--space-xs) var(--space-sm);
+        border-radius: var(--radius-sm);
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        white-space: nowrap;
+        align-self: flex-start;
+    }
+
+    .remove-button:hover {
+        background: var(--bs-danger);
+        color: white;
+        transform: scale(1.05);
+    }
+
+    .request-button {
+        background: var(--bs-primary);
+        border: none;
+        color: white;
+        padding: var(--space-xs) var(--space-md);
+        border-radius: var(--radius-sm);
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-xs);
+        white-space: nowrap;
+        align-self: flex-start;
+    }
+
+    .request-button:hover {
+        background: var(--bs-primary-hover);
+        transform: scale(1.05);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .request-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .availability-badge {
+        background: linear-gradient(135deg, var(--bs-success), #10b981);
+        color: white;
+        padding: var(--space-sm) var(--space-lg);
+        border-radius: var(--radius-md);
+        font-size: 0.9rem;
+        font-weight: 700;
+        white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-xs);
+        transition: all var(--transition-base);
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
+        animation: availability-pulse 2s ease-in-out infinite;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .availability-badge:hover {
+        transform: translateY(-2px) scale(1.05);
+        box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+        color: white;
+        text-decoration: none;
+        animation: none;
+    }
+
+    @keyframes availability-pulse {
+        0%, 100% {
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+        }
+        50% {
+            box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+        }
+    }
+
+    .availability-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        font-size: 0.875rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: var(--space-2xl);
+        color: var(--text-muted);
+    }
+
+    .empty-state-icon {
+        font-size: 3rem;
+        margin-bottom: var(--space-md);
+        opacity: 0.5;
+    }
+
+    @media (max-width: 768px) {
+        .profile-username {
+            font-size: 2rem;
+        }
+
+        .profile-stats {
+            flex-direction: column;
+            gap: var(--space-md);
+        }
+
+        .stat-card {
+            width: 100%;
+        }
+
+        .section-container {
+            padding: var(--space-lg);
+        }
+
+        .item-card {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+            gap: var(--space-md);
+        }
+
+        .action-button {
+            width: 100%;
+            max-width: 100%;
+            min-width: 100%;
+        }
+    }
+</style>
+
+<!-- Profile Header Section -->
+<div class="profile-header">
+    <h1 class="profile-username">{{user_username.username|upper}}</h1>
+    <p class="lead" style="color: var(--text-secondary); margin: 0;">Account Information</p>
+
+    <!-- Profile Statistics -->
+    <div class="profile-stats">
+        <div class="stat-card" id="books-stat" onclick="toggleSection('books')">
+            <div class="stat-number">{{ user_book_count }}</div>
+            <div class="stat-label">Book{{ user_book_count|pluralize }}</div>
+        </div>
+        <div class="stat-card" id="wishlist-stat" onclick="toggleSection('wishlist')">
+            <span class="stat-availability" id="wishlist-availability" style="display: none;">
+                <span class="stat-availability-icon">✓</span>
+                <span id="available-count">0</span>
+            </span>
+            <div class="stat-number">{{ user_wish_count }}</div>
+            <div class="stat-label">Wish{{ user_wish_count|pluralize:"es" }}</div>
+        </div>
+        <div class="stat-card" id="groups-stat" onclick="toggleSection('groups')">
+            <div class="stat-number">{{ user_group_count }}</div>
+            <div class="stat-label">Group{{ user_group_count|pluralize }}</div>
         </div>
     </div>
+
+    <!-- Action Buttons (only for authenticated owner) -->
+    {% if user.is_authenticated and user.username == user_username.username %}
+        <div class="action-buttons">
+            <!-- Status button - lower priority -->
+            <a href="{% url 'requests_to_user_all' %}?filter_by=requester" class="action-button status">
+                <span class="button-label">Your Outgoing Requests</span>
+                <span class="button-count">{{user_requests_open_count}}</span>
+            </a>
+
+            <!-- Action button - high priority -->
+            <a href="{% url 'requests_to_user_all' %}?filter_by=owner" class="action-button primary{% if pending_requests_count > 0 %} has-pending{% endif %}">
+                <span class="button-label">Review Pending Requests</span>
+                <span class="button-count">{{user_requests_recieved_open_count}}</span>
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Main Content (Collapsible Sections) -->
+<div style="max-width: 1200px; margin: 0 auto;">
+
+    <!-- Books Section -->
+    <div class="section-container" id="books-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <span>📚</span>
+                <span>Library</span>
+            </h2>
+            <div class="section-count">{{ user_book_count }}</div>
+        </div>
+
+        <!-- Sort Controls -->
+        <div class="sort-controls">
+            <span class="sort-label">Sort by:</span>
+            <div class="sort-dropdown">
+                <select class="sort-select" id="books-sort" onchange="sortBooks()">
+                    <option value="title-asc">Title (A-Z)</option>
+                    <option value="title-desc">Title (Z-A)</option>
+                    <option value="recent">Recently Added</option>
+                    <option value="oldest">Oldest First</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="item-list" id="books-list">
+            <!-- Books will be rendered here by JavaScript -->
+        </div>
+
+        {% if user_book_count > 0 %}
+        <div class="pagination-container">
+            <button class="pagination-btn" id="books-prev" onclick="changeBooksPage(-1)">
+                <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                </svg>
+                Previous
+            </button>
+            <span class="pagination-info" id="books-page-info">1 / 1</span>
+            <button class="pagination-btn" id="books-next" onclick="changeBooksPage(1)">
+                Next
+                <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                </svg>
+            </button>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">📚</div>
+            <p>No books in library yet</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Wishlist Section -->
+    <div class="section-container" id="wishlist-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <span>⭐</span>
+                <span>Wishlist</span>
+            </h2>
+            <div class="section-count">{{ user_wish_count }}</div>
+        </div>
+
+        <!-- Sort Controls -->
+        <div class="sort-controls">
+            <span class="sort-label">Sort by:</span>
+            <div class="sort-dropdown">
+                <select class="sort-select" id="wishlist-sort" onchange="sortWishlist()">
+                    <option value="title-asc">Title (A-Z)</option>
+                    <option value="title-desc">Title (Z-A)</option>
+                    <option value="most-available">Most Available</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="item-list" id="wishlist-list">
+            <!-- Wishlist will be rendered here by JavaScript -->
+        </div>
+
+        {% if user_wish_count > 0 %}
+        <div class="pagination-container">
+            <button class="pagination-btn" id="wishlist-prev" onclick="changeWishlistPage(-1)">
+                <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                </svg>
+                Previous
+            </button>
+            <span class="pagination-info" id="wishlist-page-info">1 / 1</span>
+            <button class="pagination-btn" id="wishlist-next" onclick="changeWishlistPage(1)">
+                Next
+                <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                </svg>
+            </button>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">⭐</div>
+            <p>No books on wishlist yet</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Groups Section -->
+    <div class="section-container" id="groups-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <span>👥</span>
+                <span>Groups</span>
+            </h2>
+            <div class="section-count">{{ user_group_count }}</div>
+        </div>
+
+        <!-- Sort Controls -->
+        <div class="sort-controls">
+            <span class="sort-label">Sort by:</span>
+            <div class="sort-dropdown">
+                <select class="sort-select" id="groups-sort" onchange="sortGroups()">
+                    <option value="name-asc">Name (A-Z)</option>
+                    <option value="name-desc">Name (Z-A)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="item-list" id="groups-list">
+            <!-- Groups will be rendered here by JavaScript -->
+        </div>
+
+        {% if user_group_count > 0 %}
+        <div class="pagination-container">
+            <button class="pagination-btn" id="groups-prev" onclick="changeGroupsPage(-1)">
+                <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                </svg>
+                Previous
+            </button>
+            <span class="pagination-info" id="groups-page-info">1 / 1</span>
+            <button class="pagination-btn" id="groups-next" onclick="changeGroupsPage(1)">
+                Next
+                <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                </svg>
+            </button>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">👥</div>
+            <p>Not a member of any groups</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// ==================================================================
+// ACCOUNT DETAILS - INTERACTIVE SECTIONS
+// ==================================================================
+
+// Books data
+const booksData = [
+    {% for book in user_books %}
+    {
+        pk: '{{ book.pk }}',
+        googleId: '{{ book.google_book_id }}',
+        title: '{{ book.title|escapejs }}',
+        url: '{% url 'single_book' pk=book.pk %}',
+        dateAdded: new Date('{{ book.date_added|date:"c" }}'),
+        dateAddedDisplay: '{{ book.date_added|date:"M d, Y" }}',
+        isOwner: {% if user.is_authenticated and user.username == user_username.username %}true{% else %}false{% endif %},
+        viewerOwns: {% if book.pk in viewer_owned_book_ids %}true{% else %}false{% endif %},
+        requested: {% if book.pk in requested_book_ids %}true{% else %}false{% endif %},
+        ownerPk: '{{ user_username.pk }}',
+        requesterPk: '{{ user.pk }}',
+        isAuthenticated: {% if user.is_authenticated %}true{% else %}false{% endif %},
+        ownerUsername: '{{ user_username.username|escapejs }}'
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
+
+// Wishlist data
+const wishlistData = [
+    {% for wish in user_wish %}
+    {
+        pk: '{{ wish.book.pk }}',
+        title: '{{ wish.book.title|escapejs }}',
+        url: '{% url 'single_book' pk=wish.book.pk %}',
+        ownersCount: {{ wish.owners_count }},
+        isOwnProfile: {% if user.username == user_username.username %}true{% else %}false{% endif %},
+        isAuthenticated: {% if user.is_authenticated %}true{% else %}false{% endif %}
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
+
+// Groups data
+const groupsData = [
+    {% for group in user_groups %}
+    {
+        slug: '{{ group.slug }}',
+        name: '{{ group.group_name|escapejs }}',
+        url: '{% url 'single_group' slug=group.slug %}'
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
+
+// State
+const state = {
+    books: { page: 1, sort: 'title-asc', data: [...booksData] },
+    wishlist: { page: 1, sort: 'title-asc', data: [...wishlistData] },
+    groups: { page: 1, sort: 'name-asc', data: [...groupsData] },
+    activeSection: null,
+    itemsPerPage: 10
+};
+
+// Toggle section
+function toggleSection(section) {
+    const sections = ['books', 'wishlist', 'groups'];
+    const sectionEl = document.getElementById(`${section}-section`);
+    const statEl = document.getElementById(`${section}-stat`);
+
+    if (state.activeSection === section) {
+        sectionEl.classList.remove('active');
+        statEl.classList.remove('active');
+        state.activeSection = null;
+        return;
+    }
+
+    sections.forEach(s => {
+        document.getElementById(`${s}-section`).classList.remove('active');
+        document.getElementById(`${s}-stat`).classList.remove('active');
+    });
+
+    sectionEl.classList.add('active');
+    statEl.classList.add('active');
+    state.activeSection = section;
+
+    renderSection(section);
+}
+
+// Sorting
+function sortBooks() {
+    const sortValue = document.getElementById('books-sort').value;
+    state.books.sort = sortValue;
+    state.books.page = 1;
+    state.books.data = [...booksData].sort((a, b) => {
+        if (sortValue === 'title-asc') return a.title.localeCompare(b.title);
+        if (sortValue === 'title-desc') return b.title.localeCompare(a.title);
+        if (sortValue === 'recent') return b.dateAdded - a.dateAdded; // Most recent first
+        if (sortValue === 'oldest') return a.dateAdded - b.dateAdded; // Oldest first
+        return 0;
+    });
+    renderBooks();
+}
+
+function sortWishlist() {
+    const sortValue = document.getElementById('wishlist-sort').value;
+    state.wishlist.sort = sortValue;
+    state.wishlist.page = 1;
+    state.wishlist.data = [...wishlistData].sort((a, b) => {
+        if (sortValue === 'title-asc') return a.title.localeCompare(b.title);
+        if (sortValue === 'title-desc') return b.title.localeCompare(a.title);
+        if (sortValue === 'most-available') return b.ownersCount - a.ownersCount;
+        return 0;
+    });
+    renderWishlist();
+}
+
+function sortGroups() {
+    const sortValue = document.getElementById('groups-sort').value;
+    state.groups.sort = sortValue;
+    state.groups.page = 1;
+    state.groups.data = [...groupsData].sort((a, b) => {
+        if (sortValue === 'name-asc') return a.name.localeCompare(b.name);
+        if (sortValue === 'name-desc') return b.name.localeCompare(a.name);
+        return 0;
+    });
+    renderGroups();
+}
+
+// Rendering
+function renderSection(section) {
+    if (section === 'books') renderBooks();
+    if (section === 'wishlist') renderWishlist();
+    if (section === 'groups') renderGroups();
+}
+
+function renderBooks() {
+    const { page, data } = state.books;
+    const start = (page - 1) * state.itemsPerPage;
+    const pageData = data.slice(start, start + state.itemsPerPage);
+    const totalPages = Math.ceil(data.length / state.itemsPerPage);
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+
+    document.getElementById('books-list').innerHTML = pageData.map(book => {
+        let actionButton = '';
+        if (book.isOwner) {
+            actionButton = `
+                <form method="post" action="{% url 'remove_book' %}" style="margin: 0;">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+                    <input type="hidden" name="book_id" value="${book.pk}">
+                    <input type="hidden" name="redirect_url" value="user_account">
+                    <button type="submit" class="remove-button" onclick="return confirm('Remove this book from your library?')" title="Remove from library">✕ Remove</button>
+                </form>`;
+        } else if (book.isAuthenticated) {
+            if (book.viewerOwns) {
+                actionButton = '<button type="button" class="request-button" disabled style="opacity: 0.5; cursor: not-allowed;" title="You already own this book">✓ You Own This</button>';
+            } else if (book.requested) {
+                actionButton = '<button type="button" class="request-button" disabled title="You have already requested this book">✓ Requested</button>';
+            } else {
+                actionButton = `
+                    <form method="post" action="{% url 'request_raised' %}" style="margin: 0;">
+                        <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+                        <input type="hidden" name="owner" value="${book.ownerPk}">
+                        <input type="hidden" name="requester" value="${book.requesterPk}">
+                        <input type="hidden" name="google_book_id" value="${book.googleId}">
+                        <button type="submit" class="request-button" title="Request this book from ${book.ownerUsername}">📨 Request</button>
+                    </form>`;
+            }
+        }
+        return `
+            <div class="item-card">
+                <div style="flex: 1;">
+                    <a href="${book.url}" class="item-link">${book.title}</a>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: var(--space-xs);">
+                        Added: ${book.dateAddedDisplay}
+                    </div>
+                </div>
+                ${actionButton}
+            </div>`;
+    }).join('');
+
+    document.getElementById('books-page-info').textContent = `${page} / ${totalPages || 1}`;
+    document.getElementById('books-prev').disabled = page === 1;
+    document.getElementById('books-next').disabled = page === totalPages || totalPages === 0;
+}
+
+function renderWishlist() {
+    const { page, data } = state.wishlist;
+    const start = (page - 1) * state.itemsPerPage;
+    const pageData = data.slice(start, start + state.itemsPerPage);
+    const totalPages = Math.ceil(data.length / state.itemsPerPage);
+
+    document.getElementById('wishlist-list').innerHTML = pageData.map(wish => {
+        let badge = '';
+        if (wish.isAuthenticated && wish.ownersCount > 0) {
+            if (wish.isOwnProfile) {
+                badge = `<a href="${wish.url}?show=owners" class="availability-badge" title="Click to see ${wish.ownersCount} owner${wish.ownersCount > 1 ? 's' : ''} and request this book"><span class="availability-icon">✓</span><span>${wish.ownersCount} Available</span><svg style="width: 16px; height: 16px; margin-left: var(--space-xs);" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg></a>`;
+            } else {
+                badge = `<span class="item-badge" title="${wish.ownersCount} owner${wish.ownersCount > 1 ? 's' : ''} available">${wish.ownersCount} Available</span>`;
+            }
+        }
+        return `<div class="item-card"><a href="${wish.url}" class="item-link">${wish.title}</a>${badge}</div>`;
+    }).join('');
+
+    document.getElementById('wishlist-page-info').textContent = `${page} / ${totalPages || 1}`;
+    document.getElementById('wishlist-prev').disabled = page === 1;
+    document.getElementById('wishlist-next').disabled = page === totalPages || totalPages === 0;
+}
+
+function renderGroups() {
+    const { page, data } = state.groups;
+    const start = (page - 1) * state.itemsPerPage;
+    const pageData = data.slice(start, start + state.itemsPerPage);
+    const totalPages = Math.ceil(data.length / state.itemsPerPage);
+
+    document.getElementById('groups-list').innerHTML = pageData.map(group =>
+        `<div class="item-card"><a href="${group.url}" class="item-link">${group.name}</a></div>`
+    ).join('');
+
+    document.getElementById('groups-page-info').textContent = `${page} / ${totalPages || 1}`;
+    document.getElementById('groups-prev').disabled = page === 1;
+    document.getElementById('groups-next').disabled = page === totalPages || totalPages === 0;
+}
+
+// Pagination
+function changeBooksPage(direction) {
+    const totalPages = Math.ceil(state.books.data.length / state.itemsPerPage);
+    const newPage = state.books.page + direction;
+    if (newPage >= 1 && newPage <= totalPages) {
+        state.books.page = newPage;
+        renderBooks();
+    }
+}
+
+function changeWishlistPage(direction) {
+    const totalPages = Math.ceil(state.wishlist.data.length / state.itemsPerPage);
+    const newPage = state.wishlist.page + direction;
+    if (newPage >= 1 && newPage <= totalPages) {
+        state.wishlist.page = newPage;
+        renderWishlist();
+    }
+}
+
+function changeGroupsPage(direction) {
+    const totalPages = Math.ceil(state.groups.data.length / state.itemsPerPage);
+    const newPage = state.groups.page + direction;
+    if (newPage >= 1 && newPage <= totalPages) {
+        state.groups.page = newPage;
+        renderGroups();
+    }
+}
+
+// Calculate and display available books count
+function updateAvailableCount() {
+    const availableBooks = wishlistData.filter(wish => wish.ownersCount > 0).length;
+    const availabilityBadge = document.getElementById('wishlist-availability');
+    const countSpan = document.getElementById('available-count');
+
+    if (availableBooks > 0) {
+        countSpan.textContent = availableBooks;
+        availabilityBadge.style.display = 'flex';
+        availabilityBadge.title = `${availableBooks} of your wished books ${availableBooks === 1 ? 'is' : 'are'} available`;
+    } else {
+        availabilityBadge.style.display = 'none';
+    }
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    if (booksData.length > 0) renderBooks();
+    if (wishlistData.length > 0) renderWishlist();
+    if (groupsData.length > 0) renderGroups();
+    updateAvailableCount();
+});
+</script>
 
 {% endblock %}

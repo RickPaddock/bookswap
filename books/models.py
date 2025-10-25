@@ -89,6 +89,7 @@ class Group(models.Model):
 class UserBook(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     book = models.ForeignKey(Book, related_name="book_owners", on_delete=models.CASCADE)
+    date_added = models.DateTimeField(default=timezone.now, blank=False)
 
     def __str__(self):
         return f"""{self.user}/{self.book}"""
@@ -256,6 +257,18 @@ class RequestBook(models.Model):
     reject_reason = models.CharField(
         max_length=26, choices=REJECT_REASON_CHOICES, null=True, blank=True
     )
+
+    @property
+    def status(self):
+        """Return a status object with is_live, is_accepted, is_rejected, and is_cancelled properties"""
+        class RequestStatus:
+            def __init__(self, request):
+                self.is_live = request.decision_datetime is None and request.cancelled_datetime is None
+                self.is_accepted = request.decision_datetime is not None and request.decision is True
+                self.is_rejected = request.decision_datetime is not None and request.decision is False
+                self.is_cancelled = request.cancelled_datetime is not None
+
+        return RequestStatus(self)
 
     def __str__(self):
         return f"{self.requester} requested {self.book} from {self.owner}"

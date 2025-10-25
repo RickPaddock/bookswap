@@ -36,6 +36,23 @@
         transform: rotate(180deg);
     }
 
+    /* Request button pulse animation when arriving from wishlist */
+    @keyframes request-button-pulse {
+        0%, 100% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+        }
+        50% {
+            transform: scale(1.08);
+            box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+        }
+    }
+
+    .pulse-attention {
+        animation: request-button-pulse 1s ease-in-out 3;
+        animation-delay: 0.5s;
+    }
+
     .hero-section {
         background: linear-gradient(135deg, var(--bg-elevated) 0%, var(--bg-secondary) 100%);
         border-radius: var(--radius-lg);
@@ -159,18 +176,45 @@
     }
 
     .action-btn.btn-add {
-        background: var(--primary-color);
+        background: linear-gradient(135deg, var(--bs-primary), #4f46e5);
         color: white;
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-xs);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .action-btn.btn-add:hover {
+        background: linear-gradient(135deg, #4f46e5, var(--bs-primary));
+        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        transform: translateY(-2px);
+    }
+
+    .action-btn.btn-add::before {
+        content: '📚';
+        font-size: 1rem;
     }
 
     .action-btn.btn-remove {
-        background: var(--bs-danger);
+        background: linear-gradient(135deg, var(--bs-danger), #dc2626);
         color: white;
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+    }
+
+    .action-btn.btn-remove:hover {
+        background: linear-gradient(135deg, #dc2626, var(--bs-danger));
+        box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
     }
 
     .action-btn.btn-secondary-action {
-        background: var(--bs-secondary);
+        background: linear-gradient(135deg, var(--bs-secondary), #7c3aed);
         color: white;
+        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    }
+
+    .action-btn.btn-secondary-action:hover {
+        background: linear-gradient(135deg, #7c3aed, var(--bs-secondary));
+        box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
     }
 
     /* Status container */
@@ -278,7 +322,7 @@
                         {% else %}
                             <div class="status-label not-in-collection">
                                 <span class="icon">○</span>
-                                <span>Not in Library</span>
+                                <span>You do not own this book</span>
                             </div>
                             <form method="post" action="{% url 'add_to_library' %}" style="margin: 0;">
                                 {% csrf_token %}
@@ -292,7 +336,9 @@
                                 <input type="hidden" name="ID_ISBN_13" value="{{ book.ID_ISBN_13 }}">
                                 <input type="hidden" name="ID_ISBN_10" value="{{ book.ID_ISBN_10 }}">
                                 <input type="hidden" name="ID_OTHER" value="{{ book.ID_OTHER }}">
-                                <button type="submit" class="action-btn btn-add">Add to Library</button>
+                                <button type="submit" class="action-btn btn-add">
+                                    <span>Add to Library</span>
+                                </button>
                             </form>
                         {% endif %}
                     </div>
@@ -326,10 +372,29 @@
                                 <input type="hidden" name="thumbnail" value="{{ book.thumbnail }}">
                                 <input type="hidden" name="description" value="{{ book.description }}">
                                 <input type="hidden" name="pageCount" value="{{ book.pageCount }}">
-                                <button type="submit" class="action-btn btn-add">Add to Wishlist</button>
+                                <button type="submit" class="action-btn btn-add" {% if is_owner %}disabled style="opacity: 0.5; cursor: not-allowed;" title="You already own this book"{% endif %}>Add to Wishlist</button>
                             </form>
                         {% endif %}
                     </div>
+
+                    <!-- Divider -->
+                    <div style="height: 1px; background: var(--bg-tertiary); margin: var(--space-md) 0;"></div>
+
+                    <!-- Buy on Amazon -->
+                    {% if book.ID_ISBN_13 or book.ID_ISBN_10 %}
+                    <div class="status-row">
+                        <div class="status-label">
+                            <span class="icon">🛒</span>
+                            <span>Purchase Book</span>
+                        </div>
+                        <a href="https://www.amazon.com/s?k={% if book.ID_ISBN_13 %}{{ book.ID_ISBN_13 }}{% else %}{{ book.ID_ISBN_10 }}{% endif %}"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="action-btn btn-add">
+                            Buy on Amazon
+                        </a>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
             {% else %}
@@ -438,7 +503,7 @@
                     {% endif %}
 
                     <!-- Page Count (ONLY appears here now) -->
-                    {% if book.pagecount %}
+                    {% if book.pagecount and book.pagecount != '0' and book.pagecount != 'N/A' %}
                     <div style="display: flex; padding: var(--space-sm) 0; border-bottom: 1px solid var(--bg-tertiary);">
                         <div style="min-width: 120px; color: var(--text-muted); font-weight: 500;">Pages</div>
                         <div style="color: var(--text-primary); flex: 1;">{{ book.pagecount }} pages</div>
@@ -502,14 +567,9 @@
                     </div>
 
                     <!-- External Links -->
-                    {% if book.preview_link or book.info_link %}
+                    {% if book.info_link %}
                     <div style="display: flex; gap: var(--space-md); margin-top: var(--space-lg); padding-top: var(--space-lg); border-top: 1px solid var(--bg-tertiary);">
-                        {% if book.preview_link %}
-                            <a href="{{ book.preview_link }}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="flex: 1; text-align: center; padding: var(--space-md); border-radius: var(--radius-md); text-decoration: none; font-weight: 600;">Preview on Google Books</a>
-                        {% endif %}
-                        {% if book.info_link %}
-                            <a href="{{ book.info_link }}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="flex: 1; text-align: center; padding: var(--space-md); border-radius: var(--radius-md); text-decoration: none; font-weight: 600;">More Information</a>
-                        {% endif %}
+                        <a href="{{ book.info_link }}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="flex: 1; text-align: center; padding: var(--space-md); border-radius: var(--radius-md); text-decoration: none; font-weight: 600;">More Information</a>
                     </div>
                     {% endif %}
                 </div>
@@ -545,6 +605,40 @@
             icon.classList.add('rotated');
         }
     }
+
+    // Auto-open owners section if coming from wishlist
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('show') === 'owners') {
+            const ownersSection = document.getElementById('owners-section');
+            const ownersIcon = document.getElementById('owners-icon');
+
+            if (ownersSection && !ownersSection.classList.contains('active')) {
+                ownersSection.classList.add('active');
+                if (ownersIcon) {
+                    ownersIcon.classList.add('rotated');
+                }
+
+                // Smooth scroll to owners section
+                setTimeout(function() {
+                    ownersSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+
+                // Add pulse animation to all "Request Book" buttons
+                setTimeout(function() {
+                    const requestButtons = ownersSection.querySelectorAll('button[type="submit"].btn-primary');
+                    requestButtons.forEach(function(button) {
+                        button.classList.add('pulse-attention');
+
+                        // Remove the animation class after it completes (3 pulses × 1s each + 0.5s delay)
+                        setTimeout(function() {
+                            button.classList.remove('pulse-attention');
+                        }, 3500);
+                    });
+                }, 600);
+            }
+        }
+    });
 </script>
 
 {% endblock %}

@@ -2,100 +2,514 @@
 {% block body_block %}
 {% load static %}
 
+<style>
+    .search-container {
+        max-width: 1400px;
+        margin: var(--space-2xl) auto;
+        padding: 0 var(--space-lg);
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+        border-radius: var(--radius-xl);
+        padding: var(--space-2xl) var(--space-xl);
+        margin-bottom: var(--space-2xl);
+        border: 1px solid var(--bg-elevated);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .page-header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: var(--space-md);
+        background: linear-gradient(135deg, var(--bs-primary), var(--bs-secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .results-info {
+        color: var(--text-secondary);
+        font-size: 1.125rem;
+        margin-bottom: var(--space-sm);
+    }
+
+    .pagination-info {
+        color: var(--text-muted);
+        font-size: 0.95rem;
+        font-style: italic;
+    }
+
+    .book-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--space-lg);
+        margin-bottom: var(--space-2xl);
+    }
+
+    .book-card {
+        background: var(--bg-elevated);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+        overflow: hidden;
+        transition: all var(--transition-base);
+        border: 1px solid var(--bg-tertiary);
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .book-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-xl);
+        border-color: var(--bs-primary);
+    }
+
+    .book-card-header {
+        background: var(--bg-secondary);
+        padding: var(--space-lg);
+        border-bottom: 1px solid var(--bg-tertiary);
+        display: flex;
+        gap: var(--space-lg);
+        align-items: start;
+        min-height: 180px;
+    }
+
+    .book-thumbnail {
+        flex-shrink: 0;
+        width: 90px;
+        height: 135px;
+        object-fit: cover;
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-md);
+    }
+
+    .book-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .book-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: var(--space-xs);
+        line-height: 1.3;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .book-authors {
+        color: var(--text-muted);
+        font-size: 0.95rem;
+        margin-bottom: var(--space-md);
+        font-style: italic;
+    }
+
+    .book-description {
+        background: var(--bg-secondary);
+        padding: var(--space-lg);
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        line-height: 1.6;
+        flex: 1;
+        max-height: 200px;
+        overflow-y: auto;
+        min-height: 140px;
+    }
+
+    .book-description::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .book-description::-webkit-scrollbar-track {
+        background: var(--bg-tertiary);
+        border-radius: var(--radius-sm);
+    }
+
+    .book-description::-webkit-scrollbar-thumb {
+        background: var(--bs-primary);
+        border-radius: var(--radius-sm);
+    }
+
+    .book-description::-webkit-scrollbar-thumb:hover {
+        background: var(--bs-primary-hover);
+    }
+
+    .book-actions {
+        padding: var(--space-lg);
+        background: var(--bg-tertiary);
+        display: flex;
+        gap: var(--space-md);
+        border-top: 1px solid var(--bg-elevated);
+    }
+
+    .action-button {
+        flex: 1;
+        padding: var(--space-sm) var(--space-md);
+        border: none;
+        border-radius: var(--radius-md);
+        font-weight: 600;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all var(--transition-base);
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .action-button:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .action-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        background: var(--bg-tertiary);
+        color: var(--text-muted);
+    }
+
+    .btn-library {
+        background: var(--bs-primary);
+        color: white;
+    }
+
+    .btn-library:hover {
+        background: var(--bs-primary-hover);
+    }
+
+    .btn-wishlist {
+        background: var(--bs-secondary);
+        color: white;
+    }
+
+    .btn-wishlist:hover {
+        background: #7c3aed;
+    }
+
+    /* Pagination Controls */
+    .pagination-container {
+        background: var(--bg-elevated);
+        border-radius: var(--radius-lg);
+        padding: var(--space-xl);
+        box-shadow: var(--shadow-md);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: var(--space-lg);
+        margin-bottom: var(--space-2xl);
+    }
+
+    .pagination-nav {
+        display: flex;
+        gap: var(--space-md);
+        align-items: center;
+    }
+
+    .pagination-button {
+        padding: var(--space-md) var(--space-xl);
+        background: var(--bs-primary);
+        color: white;
+        border: none;
+        border-radius: var(--radius-md);
+        font-weight: 600;
+        cursor: pointer;
+        transition: all var(--transition-base);
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-sm);
+        text-decoration: none;
+    }
+
+    .pagination-button:hover:not(:disabled) {
+        background: var(--bs-primary-hover);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .pagination-button:disabled {
+        background: var(--bg-tertiary);
+        color: var(--text-muted);
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+
+    .pagination-info-text {
+        color: var(--text-secondary);
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+    }
+
+    .page-number {
+        background: var(--bs-primary);
+        color: white;
+        padding: var(--space-xs) var(--space-md);
+        border-radius: var(--radius-md);
+        font-weight: 700;
+        min-width: 40px;
+        text-align: center;
+    }
+
+    .empty-state {
+        background: var(--bg-elevated);
+        border-radius: var(--radius-lg);
+        padding: var(--space-2xl);
+        text-align: center;
+        box-shadow: var(--shadow-md);
+    }
+
+    .empty-state-icon {
+        font-size: 4rem;
+        margin-bottom: var(--space-lg);
+        opacity: 0.5;
+    }
+
+    .empty-state-text {
+        color: var(--text-muted);
+        font-size: 1.125rem;
+    }
+
+    @media (max-width: 1200px) {
+        .book-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .book-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .book-card-header {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .book-actions {
+            flex-direction: column;
+        }
+
+        .action-button {
+            width: 100%;
+            white-space: normal;
+        }
+
+        .pagination-container {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .pagination-nav {
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .pagination-button {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
+
+<div class="search-container">
     {% if query %}
+        <!-- Page Header -->
         <div class="page-header">
             <h1>Search Results</h1>
-            <p class="lead">Found {{ books|length }} result{{ books|length|pluralize }} for "{{ query }}"</p>
+            <p class="results-info">
+                Search results for <strong>"{{ query }}"</strong>
+            </p>
         </div>
+
         {% if books %}
-            <ol>
+
+            <!-- Book Grid -->
+            <div class="book-grid">
                 {% for book in books %}
-                    <li>
-                        <h3>{{ book.title }}</h3>
-                        <p>Authors: {{ book.authors }}</p>
-                        {% if book.thumbnail %}
-                            <img src="{{ book.thumbnail }}" alt="{{ book.title }}">
-                        {% else %}
-                            <!-- Placeholder image or alternative content if thumbnail is not available -->
-                            <img src="{% static 'generic_thumbnail.jpeg' %}" alt='No Thumbnail found'>
-                        {% endif %}
-                        {% if book.description != "N/A" %}
-                            <p>{{ book.description }}</p>
-                        {% else %}
-                            <p><i>No description available</i></p>
-                        {% endif %}
-                        <!-- Drop down POPPER. Comes from bootstrap.min.css in BASE.html -->
-                        {% if user.is_authenticated %}
-                            <div class="dropdown">
-                                <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    Action
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li>
-                                        <form method="post" action="{% url 'add_to_library' %}">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="action" value="add_to_library">
-                                            <input type="hidden" name="id_google" value="{{ book.id_google }}">
-                                            <input type="hidden" name="title" value="{{ book.title }}">
-                                            <input type="hidden" name="authors" value="{{ book.authors }}">
-                                            <input type="hidden" name="thumbnail" value="{{ book.thumbnail }}">
-                                            <input type="hidden" name="description" value="{{ book.description }}">
-                                            <input type="hidden" name="pageCount" value="{{ book.pageCount }}">
-                                            <input type="hidden" name="ID_ISBN_13" value="{{ book.ID_ISBN_13 }}">
-                                            <input type="hidden" name="ID_ISBN_10" value="{{ book.ID_ISBN_10 }}">
-                                            <input type="hidden" name="ID_OTHER" value="{{ book.ID_OTHER }}">
-                                            <input type="hidden" name="published_date" value="{{ book.published_date }}">
-                                            <input type="hidden" name="language" value="{{ book.language }}">
-                                            <input type="hidden" name="categories" value="{{ book.categories }}">
-                                            <input type="hidden" name="publisher" value="{{ book.publisher }}">
-                                            <input type="hidden" name="average_rating" value="{{ book.average_rating }}">
-                                            <input type="hidden" name="ratings_count" value="{{ book.ratings_count }}">
-                                            <input type="hidden" name="preview_link" value="{{ book.preview_link }}">
-                                            <input type="hidden" name="info_link" value="{{ book.info_link }}">
-                                            <input type="hidden" name="maturity_rating" value="{{ book.maturity_rating }}">
-                                            <button type="submit" class="dropdown-item">I own this! Add to my library</button>
-                                        </form>
-                                    </li>
-                                    <li>
-                                        <form method="post" action="{% url 'add_to_library' %}">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="action" value="add_to_wishlist">
-                                            <input type="hidden" name="id_google" value="{{ book.id_google }}">
-                                            <input type="hidden" name="title" value="{{ book.title }}">
-                                            <input type="hidden" name="authors" value="{{ book.authors }}">
-                                            <input type="hidden" name="thumbnail" value="{{ book.thumbnail }}">
-                                            <input type="hidden" name="description" value="{{ book.description }}">
-                                            <input type="hidden" name="pageCount" value="{{ book.pageCount }}">
-                                            <input type="hidden" name="ID_ISBN_13" value="{{ book.ID_ISBN_13 }}">
-                                            <input type="hidden" name="ID_ISBN_10" value="{{ book.ID_ISBN_10 }}">
-                                            <input type="hidden" name="ID_OTHER" value="{{ book.ID_OTHER }}">
-                                            <input type="hidden" name="published_date" value="{{ book.published_date }}">
-                                            <input type="hidden" name="language" value="{{ book.language }}">
-                                            <input type="hidden" name="categories" value="{{ book.categories }}">
-                                            <input type="hidden" name="publisher" value="{{ book.publisher }}">
-                                            <input type="hidden" name="average_rating" value="{{ book.average_rating }}">
-                                            <input type="hidden" name="ratings_count" value="{{ book.ratings_count }}">
-                                            <input type="hidden" name="preview_link" value="{{ book.preview_link }}">
-                                            <input type="hidden" name="info_link" value="{{ book.info_link }}">
-                                            <input type="hidden" name="maturity_rating" value="{{ book.maturity_rating }}">
-                                            <button type="submit" class="dropdown-item">I want this! Add to my wishlist</button>
-                                        </form>
-                                    </li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item" href="http://www.amazon.com" target="_blank" >Buy {{ book.title }} by {{ book.authors }}</a></li>
-                                </ul>
+                    <div class="book-card">
+                        <!-- Book Header with Thumbnail and Info -->
+                        <div class="book-card-header">
+                            <!-- Thumbnail -->
+                            {% if book.thumbnail %}
+                                <img src="{{ book.thumbnail }}" alt="{{ book.title }}" class="book-thumbnail">
+                            {% else %}
+                                <img src="{% static 'generic_thumbnail.jpeg' %}" alt='No Thumbnail' class="book-thumbnail">
+                            {% endif %}
+
+                            <!-- Book Info -->
+                            <div class="book-info">
+                                <h3 class="book-title">{{ book.title }}</h3>
+                                <p class="book-authors">{{ book.authors }}</p>
                             </div>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="book-description">
+                            {% if book.description != "N/A" %}
+                                {{ book.description }}
+                            {% else %}
+                                <em style="color: var(--text-muted);">No description available</em>
+                            {% endif %}
+                        </div>
+
+                        <!-- Action Buttons -->
+                        {% if user.is_authenticated %}
+                        <div class="book-actions">
+                            <!-- Add to Library Button -->
+                            {% if book.id_google in user_owned_book_ids %}
+                                <!-- User already owns this book - disabled button -->
+                                <button type="button" class="action-button btn-library" disabled title="You already own this book">
+                                    📚 Add to Library
+                                </button>
+                            {% else %}
+                                <!-- User doesn't own - active button -->
+                                <form method="post" action="{% url 'add_to_library' %}" style="flex: 1; margin: 0;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="add_to_library">
+                                    <input type="hidden" name="id_google" value="{{ book.id_google }}">
+                                    <input type="hidden" name="title" value="{{ book.title }}">
+                                    <input type="hidden" name="authors" value="{{ book.authors }}">
+                                    <input type="hidden" name="thumbnail" value="{{ book.thumbnail }}">
+                                    <input type="hidden" name="description" value="{{ book.description }}">
+                                    <input type="hidden" name="pageCount" value="{{ book.pageCount }}">
+                                    <input type="hidden" name="ID_ISBN_13" value="{{ book.ID_ISBN_13 }}">
+                                    <input type="hidden" name="ID_ISBN_10" value="{{ book.ID_ISBN_10 }}">
+                                    <input type="hidden" name="ID_OTHER" value="{{ book.ID_OTHER }}">
+                                    <input type="hidden" name="published_date" value="{{ book.published_date }}">
+                                    <input type="hidden" name="language" value="{{ book.language }}">
+                                    <input type="hidden" name="categories" value="{{ book.categories }}">
+                                    <input type="hidden" name="publisher" value="{{ book.publisher }}">
+                                    <input type="hidden" name="average_rating" value="{{ book.average_rating }}">
+                                    <input type="hidden" name="ratings_count" value="{{ book.ratings_count }}">
+                                    <input type="hidden" name="preview_link" value="{{ book.preview_link }}">
+                                    <input type="hidden" name="info_link" value="{{ book.info_link }}">
+                                    <input type="hidden" name="maturity_rating" value="{{ book.maturity_rating }}">
+                                    <button type="submit" class="action-button btn-library" title="Add to your library">
+                                        📚 Add to Library
+                                    </button>
+                                </form>
+                            {% endif %}
+
+                            <!-- Add to Wishlist Button -->
+                            {% if book.id_google in user_owned_book_ids %}
+                                <!-- User owns the book - disabled wishlist button -->
+                                <button type="button" class="action-button btn-wishlist" disabled title="You already own this book">
+                                    ⭐ Add to Wishlist
+                                </button>
+                            {% elif book.id_google in user_wishlist_book_ids %}
+                                <!-- Already on wishlist - disabled button -->
+                                <button type="button" class="action-button btn-wishlist" disabled title="Already on your wishlist">
+                                    ⭐ Add to Wishlist
+                                </button>
+                            {% else %}
+                                <!-- Not owned and not on wishlist - active button -->
+                                <form method="post" action="{% url 'add_to_library' %}" style="flex: 1; margin: 0;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="add_to_wishlist">
+                                    <input type="hidden" name="id_google" value="{{ book.id_google }}">
+                                    <input type="hidden" name="title" value="{{ book.title }}">
+                                    <input type="hidden" name="authors" value="{{ book.authors }}">
+                                    <input type="hidden" name="thumbnail" value="{{ book.thumbnail }}">
+                                    <input type="hidden" name="description" value="{{ book.description }}">
+                                    <input type="hidden" name="pageCount" value="{{ book.pageCount }}">
+                                    <input type="hidden" name="ID_ISBN_13" value="{{ book.ID_ISBN_13 }}">
+                                    <input type="hidden" name="ID_ISBN_10" value="{{ book.ID_ISBN_10 }}">
+                                    <input type="hidden" name="ID_OTHER" value="{{ book.ID_OTHER }}">
+                                    <input type="hidden" name="published_date" value="{{ book.published_date }}">
+                                    <input type="hidden" name="language" value="{{ book.language }}">
+                                    <input type="hidden" name="categories" value="{{ book.categories }}">
+                                    <input type="hidden" name="publisher" value="{{ book.publisher }}">
+                                    <input type="hidden" name="average_rating" value="{{ book.average_rating }}">
+                                    <input type="hidden" name="ratings_count" value="{{ book.ratings_count }}">
+                                    <input type="hidden" name="preview_link" value="{{ book.preview_link }}">
+                                    <input type="hidden" name="info_link" value="{{ book.info_link }}">
+                                    <input type="hidden" name="maturity_rating" value="{{ book.maturity_rating }}">
+                                    <button type="submit" class="action-button btn-wishlist" title="Add to your wishlist">
+                                        ⭐ Add to Wishlist
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
                         {% endif %}
-                    </li>
-                    <br>
+                    </div>
                 {% endfor %}
-            </ol>
+            </div>
+
+            <!-- Pagination Controls (Bottom) -->
+            {% if total_pages > 1 %}
+            <div class="pagination-container">
+                <div class="pagination-nav">
+                    {% if has_previous %}
+                        <a href="?query={{ query }}&page={{ page|add:'-1' }}" class="pagination-button">
+                            <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            Previous
+                        </a>
+                    {% else %}
+                        <button class="pagination-button" disabled>
+                            <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            Previous
+                        </button>
+                    {% endif %}
+
+                    {% if has_next %}
+                        <a href="?query={{ query }}&page={{ page|add:'1' }}" class="pagination-button">
+                            Next
+                            <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                        </a>
+                    {% else %}
+                        <button class="pagination-button" disabled>
+                            Next
+                            <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
+                    {% endif %}
+                </div>
+
+                <div class="pagination-info-text">
+                    <span>Page</span>
+                    <span class="page-number">{{ page }}</span>
+                    <span>of {{ total_pages }}</span>
+                </div>
+            </div>
+            {% endif %}
+
         {% else %}
-            <p>No results found.</p>
+            <!-- No Results -->
+            <div class="empty-state">
+                <div class="empty-state-icon">🔍</div>
+                <p class="empty-state-text">No results found for "{{ query }}"</p>
+                <p class="empty-state-text" style="margin-top: var(--space-md); font-size: 0.95rem;">
+                    Try searching with different keywords or check your spelling
+                </p>
+            </div>
         {% endif %}
     {% endif %}
+
     {% if form.errors %}
-        <p>Form errors: {{ form.errors }}</p>
+        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid var(--bs-danger); border-radius: var(--radius-lg); padding: var(--space-lg); color: var(--bs-danger); margin-top: var(--space-lg);">
+            <strong>Error:</strong> {{ form.errors }}
+        </div>
     {% endif %}
+
+    {% if error_message %}
+        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid var(--bs-danger); border-radius: var(--radius-lg); padding: var(--space-lg); color: var(--bs-danger); margin-top: var(--space-lg);">
+            <strong>Error:</strong> {{ error_message }}
+        </div>
+    {% endif %}
+</div>
 
 {% endblock %}
